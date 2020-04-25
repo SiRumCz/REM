@@ -121,7 +121,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                 y=Yed_github_rt[len(Yed_github_rt)-2:],
                 mode='lines',
                 legendgroup="gh_rt",
-                name="runtime dependency relationships",
+                name="runtime dependency relationships (dark-red means is affected by package deprecation)",
                 line=dict(color=ed_color_github_rt[len(ed_color_github_rt)-1], width=0.8)
         )]
     
@@ -141,7 +141,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                 y=Yed_github_dev[len(Yed_github_dev)-2:],
                 mode='lines',
                 legendgroup="gh_dev",
-                name="development dependencies relationships",
+                name="development dependencies relationships (dark-red means is affected by package deprecation)",
                 line=dict(color=ed_color_github_dev[len(ed_color_github_dev)-1], width=0.8)
         )]
     
@@ -151,7 +151,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                y=Yv_gh_rt,
                mode='markers',
                legendgroup="gh_rt",               
-               name='runtime packages',
+               name='runtime packages (red outline means deprecation)',
                marker=dict(symbol='circle',
                              size=8,
                              color=v_scores_gh_rt,
@@ -173,7 +173,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                y=Yv_gh_dev,
                mode='markers',
                legendgroup="gh_dev",               
-               name='development packages',
+               name='development packages (red outline means deprecation)',
                marker=dict(symbol='circle',
                              size=8,
                              color=v_scores_gh_dev,
@@ -470,6 +470,8 @@ def main():
     # fetch github application package.json
     # runtime and development dependencies
     rt_deps, dev_deps = retrieve_package_json_deps(owner, repo, branch)
+    if not rt_deps and not dev_deps: 
+        sys.exit('application does not have any runtime and development dependencies')
 
     # add github application to the NPM network
     application_name = '{owner}:{repo}({branch})'.format(owner=owner, repo=repo, branch=branch)
