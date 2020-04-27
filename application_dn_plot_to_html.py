@@ -50,6 +50,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     pos       : positions of graph node
     title     : graph title 
     key       : display of nodes based on scores (final(default)|popularity|quality|maintenance)
+    outfile   : output path for html file
     '''
     # separating runtime and development dependency networks
     rt_nodes_set = set()
@@ -204,7 +205,6 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
         plot_bgcolor='white'
     )
     
-    outfile = os.path.join('htmls', outfile)
     return fig.write_html(outfile)
 
 
@@ -258,7 +258,7 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
-def project_graph_analysis(G: nx.Graph, pname: str):
+def project_graph_analysis(G: nx.Graph, pname: str, outfile: str):
     print('NPM software:', pname)
     
     ''' pre. check if exists '''
@@ -331,7 +331,7 @@ def project_graph_analysis(G: nx.Graph, pname: str):
         # using dot diagram which shows the hierarchy of the network
         dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
         plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
-        title='dependency network for {}'.format(pname), key='popularity', outfile=pname+'.html')
+        title='dependency network for {}'.format(pname), key='popularity', outfile=outfile)
     else:
         ''' 3.a number of deprecated packages '''
         if len(rt_sub_g_deprecated_list) > 0:
@@ -412,12 +412,17 @@ def project_graph_analysis(G: nx.Graph, pname: str):
         # using dot diagram which shows the hierarchy of the network
         dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
         plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
-                     title='dependency network for {}'.format(pname), key='popularity', outfile=pname+'.html')
+                     title='dependency network for {}'.format(pname), key='popularity', outfile=outfile)
 
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit('Usage: python3 application_dn_plot_to_html.py <github_url>')
+        sys.exit('Usage: python3 application_dn_plot_to_html.py <github_url> [<out_folder>(htmls/)]')
+    
+    if len(sys.argv) == 3:
+        out_folder = sys.argv[2]
+    else:
+        out_folder = 'htmls'
 
     dbfile = os.path.join('data', 'dep_network.db') # sqlite3 dependency network database
 
@@ -491,8 +496,9 @@ def main():
     .format(application_name, application_sub_G.number_of_nodes(), application_sub_G.number_of_edges()))
 
     # export dependency network to HTML file
-    project_graph_analysis(G=npm_G, pname=application_name)
-    print('exported dependency network to out/.')
+    outfile = os.path.join(out_folder, '{}-{}_{}.html'.format(owner, repo, branch))
+    project_graph_analysis(G=npm_G, pname=application_name, outfile=outfile)
+    print('exported dependency network to {}.'.format(out_folder))
 
     conn.close()
 
