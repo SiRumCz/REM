@@ -258,7 +258,7 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
-def project_graph_analysis(G: nx.Graph, pname: str, outfile: str):
+def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
     print('NPM software:', pname)
     
     ''' pre. check if exists '''
@@ -331,7 +331,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str):
         # using dot diagram which shows the hierarchy of the network
         dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
         plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
-        title='dependency network for {}'.format(pname), key='popularity', outfile=outfile)
+        title='dependency network for {}'.format(pname), key=keyword, outfile=outfile)
     else:
         ''' 3.a number of deprecated packages '''
         if len(rt_sub_g_deprecated_list) > 0:
@@ -412,15 +412,17 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str):
         # using dot diagram which shows the hierarchy of the network
         dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
         plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
-                     title='dependency network for {}'.format(pname), key='popularity', outfile=outfile)
+                     title='dependency network for {}'.format(pname), key=keyword, outfile=outfile)
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit('Usage: python3 application_dn_plot_to_html.py <github_url> [<out_folder>(htmls/)]')
+    if len(sys.argv) < 3:
+        sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> <github_url> [<out_folder>(htmls/)]')
     
-    if len(sys.argv) == 3:
-        out_folder = sys.argv[2]
+    keyword = sys.argv[1]
+
+    if len(sys.argv) == 4:
+        out_folder = sys.argv[3]
     else:
         out_folder = 'htmls'
 
@@ -431,7 +433,7 @@ def main():
         sys.exit('dependency network database not found, please run preprocess fisrt')
     
     # parse github repo and split into owner, repo, and branch 
-    repo_url = sys.argv[1]
+    repo_url = sys.argv[2]
     # naive check if input is github address
     if 'github' not in repo_url:
         sys.exit('input must be a github url, example: github.com/<owner>/<repo>')
@@ -496,8 +498,8 @@ def main():
     .format(application_name, application_sub_G.number_of_nodes(), application_sub_G.number_of_edges()))
 
     # export dependency network to HTML file
-    outfile = os.path.join(out_folder, '{}-{}_{}.html'.format(owner, repo, branch))
-    project_graph_analysis(G=npm_G, pname=application_name, outfile=outfile)
+    outfile = os.path.join(out_folder, '{}-{}-{}_{}.html'.format(owner, repo, branch, keyword))
+    project_graph_analysis(G=npm_G, pname=application_name, outfile=outfile, keyword=keyword)
     print('exported dependency network to {}.'.format(out_folder))
 
     conn.close()
