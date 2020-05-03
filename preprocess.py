@@ -269,26 +269,26 @@ def update_scores_table_from_npm_search_criteria(conn: sqlite3.Connection) -> in
     for index, pname in enumerate(name_list):
         response = get_api_data(npm_registry_api.format(name=pname))
         scores = [None, None, None, None] # final, popularity,quality, maintenance
-        # if response and response.status_code == 200:
-        #     data = response.json()
-        #     if is_valid_key(data=data, key='objects'):
-        #         objects = data['objects']
-        #         if len(objects) > 0:
-        #             pdata = objects[0]
-        #             if is_valid_key(data=pdata, key='package'):
-        #                 package = pdata['package']
-        #                 if package['name'] == pname or \
-        #                     (is_valid_key(package, 'keywords') and pname in package['keywords']):
-        #                     if is_valid_key(package, 'score'):
-        #                         score = package['score']
-        #                         count += 1
-        #                         if is_valid_key(score, 'final'):
-        #                             scores[0] = score['final']
-        #                         if is_valid_key(score, 'detail'):
-        #                             detail = score['detail']
-        #                             scores[1] = detail['popularity'] if is_valid_key(detail, 'popularity') else None
-        #                             scores[2] = detail['quality'] if is_valid_key(detail, 'quality') else None
-        #                             scores[3] = detail['maintenance'] if is_valid_key(detail, 'maintenance') else None
+        if response and response.status_code == 200:
+            data = response.json()
+            if is_valid_key(data=data, key='objects'):
+                objects = data['objects']
+                if len(objects) > 0:
+                    pdata = objects[0]
+                    if is_valid_key(data=pdata, key='package'):
+                        package = pdata['package']
+                        if package['name'] == pname or \
+                            (is_valid_key(package, 'keywords') and pname in package['keywords']):
+                            if is_valid_key(package, 'score'):
+                                score = package['score']
+                                count += 1
+                                if is_valid_key(score, 'final'):
+                                    scores[0] = score['final']
+                                if is_valid_key(score, 'detail'):
+                                    detail = score['detail']
+                                    scores[1] = detail['popularity'] if is_valid_key(detail, 'popularity') else None
+                                    scores[2] = detail['quality'] if is_valid_key(detail, 'quality') else None
+                                    scores[3] = detail['maintenance'] if is_valid_key(detail, 'maintenance') else None
         dncur.execute(''' INSERT INTO scores VALUES (?, ?, ?, ?, ?); ''', [pname] + scores)
         print("updating npm search criteria scores on NPM packages [{}/{}]".format(index+1, len(name_list)), end='\r')
     print()
