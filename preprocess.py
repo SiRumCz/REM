@@ -229,6 +229,22 @@ def post_api_data(url: str, data: str):
         return None
 
 
+def get_api_data(url: str):
+    '''
+    retrieve GET requests from url
+    '''
+    try:
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+        }
+        resp = requests.get(url, headers=headers)
+        return resp
+    except:
+        return None
+
+
 def get_chunk_list(length: int, chunk: int = 100) -> list:
     ''' 
     given a range and a chunk number,
@@ -244,7 +260,42 @@ def get_chunk_list(length: int, chunk: int = 100) -> list:
     return ret_list
 
 
-def update_scores_table(conn: sqlite3.Connection) -> int:
+def update_scores_table_from_npm_search_criteria(conn: sqlite3.Connection) -> int:
+    npm_registry_api = 'http://registry.npmjs.org/-/v1/search?text={name}'
+    dncur = conn.cursor()
+    dncur.execute(''' SELECT name FROM packages; ''')
+    name_list = [x[0] for x in dncur.fetchall()]
+    count = 0
+    for index, pname in enumerate(name_list):
+        response = get_api_data(npm_registry_api.format(name=pname))
+        scores = [None, None, None, None] # final, popularity,quality, maintenance
+        # if response and response.status_code == 200:
+        #     data = response.json()
+        #     if is_valid_key(data=data, key='objects'):
+        #         objects = data['objects']
+        #         if len(objects) > 0:
+        #             pdata = objects[0]
+        #             if is_valid_key(data=pdata, key='package'):
+        #                 package = pdata['package']
+        #                 if package['name'] == pname or \
+        #                     (is_valid_key(package, 'keywords') and pname in package['keywords']):
+        #                     if is_valid_key(package, 'score'):
+        #                         score = package['score']
+        #                         count += 1
+        #                         if is_valid_key(score, 'final'):
+        #                             scores[0] = score['final']
+        #                         if is_valid_key(score, 'detail'):
+        #                             detail = score['detail']
+        #                             scores[1] = detail['popularity'] if is_valid_key(detail, 'popularity') else None
+        #                             scores[2] = detail['quality'] if is_valid_key(detail, 'quality') else None
+        #                             scores[3] = detail['maintenance'] if is_valid_key(detail, 'maintenance') else None
+        dncur.execute(''' INSERT INTO scores VALUES (?, ?, ?, ?, ?); ''', [pname] + scores)
+        print("updating npm search criteria scores on NPM packages [{}/{}]".format(index+1, len(name_list)), end='\r')
+    print()
+    return count
+
+
+def update_scores_table_from_npmsio(conn: sqlite3.Connection) -> int:
     '''
     scores table stores the npms.io score system downloaded from npms.io public API
     score systems contains 4 metrics: final, popularity, quality, maintenance
@@ -312,7 +363,8 @@ def main():
     # update depend table
     num_depends = update_depend_table(dnconn)
     # update scores table
-    num_scores = update_scores_table(dnconn)
+    # num_scores = update_scores_table_from_npmsio(dnconn)
+    num_scores = update_scores_table_from_npm_search_criteria(dnconn)
     # print stats
     print('All updates finished')
     print('{} NPM packages, {} NPM dependency relationships, {} scores'
