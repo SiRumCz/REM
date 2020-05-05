@@ -44,6 +44,24 @@ def set_node_color_by_scores(node: tuple, key: str) -> str:
     return scale[math.ceil(meta[key]*10)] if (meta and key in meta and meta[key] is not None) else 'black'
 
 
+def set_node_marker_size(node: tuple) -> int:
+    '''
+    regular size: 8
+    deprecated size: 15
+    '''
+    name, meta = node
+    return 15 if meta and is_valid_key(meta, 'deprecated') and meta['deprecated'] else 8
+
+
+def set_node_line_width(node: tuple) -> int:
+    '''
+    regular size: 1
+    deprecated size: 3
+    '''
+    name, meta = node
+    return 3 if meta and is_valid_key(meta, 'deprecated') and meta['deprecated'] else 1
+
+
 def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'final', outfile: str = 'temp.html'):
     ''' 
     G         : networkx graph
@@ -75,7 +93,12 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     # vertice node color based on scores system (fill or line)
     v_scores_gh_rt=[set_node_color_by_scores(n, key) for n in list(rt_sub_G.nodes(data=True))]
     v_scores_gh_dev=[set_node_color_by_scores(n, key) for n in list(dev_sub_G.nodes(data=True))]
-    
+    # vertice size
+    v_size_gh_rt=[set_node_marker_size(n) for n in list(rt_sub_G.nodes(data=True))]
+    v_size_gh_dev=[set_node_marker_size(n) for n in list(dev_sub_G.nodes(data=True))]
+    # vertice line width
+    v_width_gh_rt=[set_node_line_width(n) for n in list(rt_sub_G.nodes(data=True))]
+    v_width_gh_dev=[set_node_line_width(n) for n in list(dev_sub_G.nodes(data=True))]
     # vertice text lists
     v_text_gh_rt=[dict_to_text(n, key) for n in list(rt_sub_G.nodes(data=True))]
     v_text_gh_dev=[dict_to_text(n, key) for n in list(dev_sub_G.nodes(data=True))]
@@ -154,9 +177,10 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                legendgroup="gh_rt",               
                name='runtime packages (red outline means deprecation)',
                marker=dict(symbol='circle',
-                             size=8,
+                             size=v_size_gh_rt,
+                             opacity=1,
                              color=v_scores_gh_rt,
-                             line=dict(color=v_color_gh_rt, width=1),
+                             line=dict(color=v_color_gh_rt, width=v_width_gh_rt),
                              colorscale="RdYlGn",
                              showscale=True,
                              cmin=0.0,
@@ -176,9 +200,10 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                legendgroup="gh_dev",               
                name='development packages (red outline means deprecation)',
                marker=dict(symbol='circle',
-                             size=8,
+                             size=v_size_gh_dev,
+                             opacity=1,
                              color=v_scores_gh_dev,
-                             line=dict(color=v_color_gh_dev, width=1),
+                             line=dict(color=v_color_gh_dev, width=v_width_gh_dev),
                              colorscale="RdYlGn",
                              showscale=True,
                              cmin=0.0,
