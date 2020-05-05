@@ -279,8 +279,8 @@ def update_scores_table_from_npm_search_criteria(conn: sqlite3.Connection) -> in
                         package = pdata['package']
                         if package['name'] == pname or \
                             (is_valid_key(package, 'keywords') and pname in package['keywords']):
-                            if is_valid_key(package, 'score'):
-                                score = package['score']
+                            if is_valid_key(pdata, 'score'):
+                                score = pdata['score']
                                 count += 1
                                 if is_valid_key(score, 'final'):
                                     scores[0] = score['final']
@@ -290,7 +290,7 @@ def update_scores_table_from_npm_search_criteria(conn: sqlite3.Connection) -> in
                                     scores[2] = detail['quality'] if is_valid_key(detail, 'quality') else None
                                     scores[3] = detail['maintenance'] if is_valid_key(detail, 'maintenance') else None
         dncur.execute(''' INSERT INTO scores VALUES (?, ?, ?, ?, ?); ''', [pname] + scores)
-        print("updating npm search criteria scores on NPM packages [{}/{}]".format(index+1, len(name_list)), end='\r')
+        print("updating npm search criteria scores on NPM packages [({}){}/{}]".format(count, index+1, len(name_list)), end='\r')
     print()
     return count
 
