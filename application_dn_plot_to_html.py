@@ -187,7 +187,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                              cmid=0.5,
                              cmax=1.0,
                              colorbar=dict(
-                                title=dict(text='npms.io score: '+key, side='right'),
+                                title=dict(text='score: '+key, side='right'),
                                 thickness=10
                              )),
                text=v_text_gh_rt,
@@ -210,7 +210,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                              cmid=0.5,
                              cmax=1.0,
                              colorbar=dict(
-                                title=dict(text='npms.io score: '+key, side='right'),
+                                title=dict(text='score: '+key, side='right'),
                                 thickness=10
                              )),
                text=v_text_gh_dev,
@@ -283,12 +283,57 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
+def filter_by_score(G: nx.Graph, root: str, keyword: str):
+    # TODO: filter down node number
+    # if the successor node has higher <keyword> score -> hide by removing edge
+
+    ''' remove reverse cycles '''
+    try:
+        while(True):
+            edge_to_be_removed = nx.find_cycle(G)[-1]
+            print('graph contains cycle(s), removing edge', edge_to_be_removed)
+            G.remove_edge(edge_to_be_removed[0], edge_to_be_removed[1])
+    except:
+        pass
+    queue = []
+    queue.append(root)
+
+    while len(queue) > 0:
+        # print(len(queue))
+        name = queue.pop()
+        meta = G.nodes()[name]
+        if is_valid_key(meta, 'type') \
+        and meta['type'] == 'GITHUB':
+            queue += list(G.neighbors(name))
+            continue
+        score = meta[keyword] if is_valid_key(meta, keyword) else None
+        for dep_name in list(G.neighbors(name)):
+            dep_meta = G.nodes()[dep_name]
+            dep_score = dep_meta[keyword] if dep_meta and is_valid_key(dep_meta, keyword) else None
+            # print(name, score, dep_name, dep_score)
+            if score and dep_score:
+                if dep_score > score:
+                    G.remove_edge(name, dep_name)
+                else:
+                    queue.append(dep_name)
+            elif dep_score is None:
+                G.remove_edge(name, dep_name)
+            elif score is None:
+                queue.append(dep_name)
+    return G.subgraph(list(nx.descendants(G, root))+[root])
+
+
 def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
     print('NPM software:', pname)
     
     ''' pre. check if exists '''
     if pname not in list(G.nodes()):
         print('\nsoftware not found.')
+        return
+    
+    ''' pre. check if keyword is valid '''
+    if keyword not in ['final', 'quality', 'popularity', 'maintenance']:
+        print('\ninvalid keyword.')
         return
     
     ''' 1. direct dependencies '''
@@ -428,17 +473,29 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
                       100 * len(dev_ripple_effect_edges) / project_dev_sub_G.number_of_edges(),
                       len(dev_sub_g_deprecated_list)))
         
-        ''' 3.c(pre-4) adding color attributes on the edges for network '''
+        ''' 3.c(pre-4.a) graph filter that reduces node number '''
+        print('\nbefore filter: {:,} nodes, {:,} edges'
+              .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
+        # RUNTIME
+        temp_rt_G = filter_by_score(G=project_rt_sub_G, root=pname, keyword=keyword)
+        # DEVELOPMENT
+        temp_dev_G = filter_by_score(G=project_dev_sub_G, root=pname, keyword=keyword)
+        # COMBINED
+        project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
+        print('after filter: {:,} nodes, {:,} edges'
+              .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
+        
+        ''' 3.d(pre-4.b) adding color attributes on the edges for network '''
         for pair in list(project_sub_G.edges()):
             project_sub_G.edges()[pair]['color'] = 'lightgrey'\
             if (pair not in rt_ripple_effect_edges and pair not in dev_ripple_effect_edges) else '#8b0000'
         
         ''' 4. node link diagram of the dependency network '''
         # using dot diagram which shows the hierarchy of the network
-        dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
-        plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
+        pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
+#         pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
+        plotly_graph_to_html(G=project_sub_G, pos=pos, 
                      title='dependency network for {}'.format(pname), key=keyword, outfile=outfile)
-
 
 def main():
     if len(sys.argv) < 3:
@@ -451,7 +508,7 @@ def main():
     else:
         out_folder = 'htmls'
 
-    dbfile = os.path.join('data', 'dep_network.db') # sqlite3 dependency network database
+    dbfile = os.path.join('data', 'dep_network_npm_search.db') # sqlite3 dependency network database
 
     # check if file exists
     if not os.path.isfile(dbfile):
@@ -518,13 +575,13 @@ def main():
     .format(npm_G.number_of_nodes(), npm_G.number_of_edges()))
 
     # create github application sub graph
-    application_sub_G = npm_G.subgraph(list(nx.descendants(npm_G, application_name))+[application_name])
+    application_sub_G = npm_G.subgraph(list(nx.descendants(npm_G, application_name))+[application_name]).copy()
     print('created sub-graph for {}. [{:,}] nodes, [{:,}] edges'
     .format(application_name, application_sub_G.number_of_nodes(), application_sub_G.number_of_edges()))
 
     # export dependency network to HTML file
     outfile = os.path.join(out_folder, '{}-{}-{}_{}.html'.format(owner, repo, branch, keyword))
-    project_graph_analysis(G=npm_G, pname=application_name, outfile=outfile, keyword=keyword)
+    project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword)
     print('exported dependency network to {}.'.format(out_folder))
 
     conn.close()
