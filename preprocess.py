@@ -19,11 +19,11 @@ def beautify_json(data:dict) -> str:
     return json.dumps(data, indent=2)
 
 
-def is_valid_key(data: dict, key) -> bool:
+def is_valid_key(data: dict, key: str) -> bool:
     '''
     check if key is valid
     '''
-    return data and key and (key in data) and (data[key])
+    return data and key and (key in data) and (data[key] is not None)
 
 def create_tables(conn: sqlite3.Connection):
     dncur = conn.cursor()

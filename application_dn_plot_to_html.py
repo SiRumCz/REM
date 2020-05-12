@@ -156,7 +156,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
             mode='lines',
             legendgroup="gh_dev",
             showlegend=False,
-            line=dict(color=ed_color_github_dev[i], width=1)
+            line=dict(color=ed_color_github_dev[i], width=3.2)
         )]
         
     if len(Xed_github_dev) > 0:
@@ -166,7 +166,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                 mode='lines',
                 legendgroup="gh_dev",
                 name="development dependencies relationships (dark-red means is affected by package deprecation)",
-                line=dict(color=ed_color_github_dev[len(ed_color_github_dev)-1], width=0.8)
+                line=dict(color=ed_color_github_dev[len(ed_color_github_dev)-1], width=3.2)
         )]
     
     # node traces
@@ -290,8 +290,9 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
     ''' remove reverse cycles '''
     try:
         while(True):
-            edge_to_be_removed = nx.find_cycle(G)[-1]
-            print('graph contains cycle(s), removing edge', edge_to_be_removed)
+            cycle_list = nx.find_cycle(G)
+            edge_to_be_removed = cycle_list[-1]
+            print('breaking cycle', ', '.join(['[{}]->[{}]'.format(u,v) for u,v in cycle_list]))
             G.remove_edge(edge_to_be_removed[0], edge_to_be_removed[1])
     except:
         pass
