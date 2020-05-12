@@ -23,7 +23,7 @@ def is_valid_key(data: dict, key: str) -> bool:
     '''
     check if key is valid
     '''
-    return data and key and (key in data) and (data[key] is not None)
+    return data and key and (key in data) and (data[key])
 
 def create_tables(conn: sqlite3.Connection):
     dncur = conn.cursor()
@@ -286,9 +286,9 @@ def update_scores_table_from_npm_search_criteria(conn: sqlite3.Connection) -> in
                                     scores[0] = score['final']
                                 if is_valid_key(score, 'detail'):
                                     detail = score['detail']
-                                    scores[1] = detail['popularity'] if is_valid_key(detail, 'popularity') else None
-                                    scores[2] = detail['quality'] if is_valid_key(detail, 'quality') else None
-                                    scores[3] = detail['maintenance'] if is_valid_key(detail, 'maintenance') else None
+                                    scores[1] = detail['popularity'] if is_valid_key(detail, 'popularity') else 0
+                                    scores[2] = detail['quality'] if is_valid_key(detail, 'quality') else 0
+                                    scores[3] = detail['maintenance'] if is_valid_key(detail, 'maintenance') else 0
         dncur.execute(''' INSERT INTO scores VALUES (?, ?, ?, ?, ?); ''', [pname] + scores)
         print("updating npm search criteria scores on NPM packages [({}){}/{}]".format(count, index+1, len(name_list)), end='\r')
     print()
