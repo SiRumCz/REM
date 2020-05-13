@@ -284,24 +284,21 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
 
 
 def filter_by_score(G: nx.Graph, root: str, keyword: str):
-    # TODO: filter down node number
-    # if the successor node has higher <keyword> score -> hide by removing edge
-
-    ''' remove reverse cycles '''
-    try:
-        while(True):
-            cycle_list = nx.find_cycle(G)
-            edge_to_be_removed = cycle_list[-1]
-            print('breaking cycle', ', '.join(['[{}]->[{}]'.format(u,v) for u,v in cycle_list]))
-            G.remove_edge(edge_to_be_removed[0], edge_to_be_removed[1])
-    except:
-        pass
+    '''
+    minimize graph size
+    if the successor node has higher or equal <keyword> score 
+    -> 
+    filter by removing edge
+    '''
+    visited = {n: False for n in list(G.nodes())}
     queue = []
     queue.append(root)
 
     while len(queue) > 0:
-        # print(len(queue))
         name = queue.pop()
+        if visited[name]:
+            continue
+        visited[name] = True
         meta = G.nodes()[name]
         if is_valid_key(meta, 'type') \
         and meta['type'] == 'GITHUB':
@@ -311,9 +308,8 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
         for dep_name in list(G.neighbors(name)):
             dep_meta = G.nodes()[dep_name]
             dep_score = dep_meta[keyword] if dep_meta and is_valid_key(dep_meta, keyword) else None
-            # print(name, score, dep_name, dep_score)
             if score and dep_score:
-                if dep_score > score:
+                if dep_score >= score:
                     G.remove_edge(name, dep_name)
                 else:
                     queue.append(dep_name)
@@ -321,6 +317,7 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
                 G.remove_edge(name, dep_name)
             elif score is None:
                 queue.append(dep_name)
+    
     return G.subgraph(list(nx.descendants(G, root))+[root])
 
 
