@@ -321,7 +321,7 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
     return G.subgraph(list(nx.descendants(G, root))+[root])
 
 
-def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
+def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, filter_flag: bool):
     print('NPM software:', pname)
     
     ''' pre. check if exists '''
@@ -365,8 +365,6 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
     # DEVELOPMENT
     project_dev_sub_G = G.subgraph(list(dev_trans_nodes_set)).copy()
     
-    project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
-    
     # print graph shape
     print()
     print('NPM package RUNTIME dependency network for top starred github project ({}) shape:'
@@ -393,6 +391,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
     if (len(rt_sub_g_deprecated_list) == 0 and len(dev_sub_g_deprecated_list) == 0):
         print('Congratulations! There is no deprecated packages in the software.')
         ''' 4. node link diagram of the dependency network '''
+        project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
         for pair in list(project_sub_G.edges()):
             project_sub_G.edges()[pair]['color'] = 'grey'
         
@@ -422,7 +421,6 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
                 print('{} : {}'.format(name, json.dumps(meta, indent=2)))
             
         ''' 3.b number of affect edges '''
-        
         # RUNTIME
         rt_ripple_effect_edges = set()
         rt_ripple_effect_nodes = set()
@@ -470,39 +468,46 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
               .format(len(dev_ripple_effect_edges),
                       100 * len(dev_ripple_effect_edges) / project_dev_sub_G.number_of_edges(),
                       len(dev_sub_g_deprecated_list)))
-        
-        ''' 3.c(pre-4.a) graph filter that reduces node number '''
-        print('\nbefore filter: {:,} nodes, {:,} edges'
-              .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
-        # RUNTIME
-        temp_rt_G = filter_by_score(G=project_rt_sub_G, root=pname, keyword=keyword)
-        # DEVELOPMENT
-        temp_dev_G = filter_by_score(G=project_dev_sub_G, root=pname, keyword=keyword)
-        # COMBINED
-        project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
-        print('after filter: {:,} nodes, {:,} edges'
-              .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
-        
-        ''' 3.d(pre-4.b) adding color attributes on the edges for network '''
-        for pair in list(project_sub_G.edges()):
-            project_sub_G.edges()[pair]['color'] = 'lightgrey'\
-            if (pair not in rt_ripple_effect_edges and pair not in dev_ripple_effect_edges) else '#8b0000'
+
+        ''' 3.c(pre-4.a) adding color attributes on the edges for network '''
+        for pair in list(project_rt_sub_G.edges()):
+            project_rt_sub_G.edges()[pair]['color'] = 'lightgrey'\
+            if pair not in rt_ripple_effect_edges else '#8b0000'
+
+        for pair in list(project_dev_sub_G.edges()):
+            project_dev_sub_G.edges()[pair]['color'] = 'lightgrey'\
+            if pair not in dev_ripple_effect_edges else '#8b0000'
+
+        ''' 3.d(pre-4.b) graph filter that reduces node number '''
+        project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
+        if filter_flag:
+            print('\nbefore filter: {:,} nodes, {:,} edges'
+                    .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
+            # RUNTIME
+            temp_rt_G = filter_by_score(G=project_rt_sub_G, root=pname, keyword=keyword)
+            # DEVELOPMENT
+            temp_dev_G = filter_by_score(G=project_dev_sub_G, root=pname, keyword=keyword)
+            # COMBINED
+            project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
+            print('after filter: {:,} nodes, {:,} edges'
+                    .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
         
         ''' 4. node link diagram of the dependency network '''
         # using dot diagram which shows the hierarchy of the network
         pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
-#         pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
+        # pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
                      title='dependency network for {}'.format(pname), key=keyword, outfile=outfile)
 
 def main():
     if len(sys.argv) < 3:
-        sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> <github_url> [<out_folder>(htmls/)]')
+        sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> <filter_flag> <github_url> [<out_folder>(htmls/)]')
     
     keyword = sys.argv[1]
+    filter_flag = True if sys.argv[2] == 'filter=True' else False
 
-    if len(sys.argv) == 4:
-        out_folder = sys.argv[3]
+    if len(sys.argv) == 5:
+        out_folder = sys.argv[4]
     else:
         out_folder = 'htmls'
 
@@ -513,7 +518,7 @@ def main():
         sys.exit('dependency network database not found, please run preprocess fisrt')
     
     # parse github repo and split into owner, repo, and branch 
-    repo_url = sys.argv[2]
+    repo_url = sys.argv[3]
     # naive check if input is github address
     if 'github' not in repo_url:
         sys.exit('input must be a github url, example: github.com/<owner>/<repo>')
@@ -579,7 +584,7 @@ def main():
 
     # export dependency network to HTML file
     outfile = os.path.join(out_folder, '{}-{}-{}_{}.html'.format(owner, repo, branch, keyword))
-    project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword)
+    project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=filter)
     print('exported dependency network to {}.'.format(out_folder))
 
     conn.close()
