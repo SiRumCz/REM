@@ -283,7 +283,7 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
-def filter_by_score(G: nx.Graph, root: str, keyword: str):
+def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
     '''
     minimize graph size
     if the successor node has higher or equal <keyword> score 
@@ -310,11 +310,17 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
             dep_score = dep_meta[keyword] if dep_meta and is_valid_key(dep_meta, keyword) else None
             if score and dep_score:
                 if dep_score >= score:
-                    G.remove_edge(name, dep_name)
+                    if (name,dep_name) not in ripples:
+                        G.remove_edge(name, dep_name)
+                    else:
+                        queue.append(dep_name)
                 else:
                     queue.append(dep_name)
             elif dep_score is None:
-                G.remove_edge(name, dep_name)
+                if (name,dep_name) not in ripples:
+                    G.remove_edge(name, dep_name)
+                else:
+                    queue.append(dep_name)
             elif score is None:
                 queue.append(dep_name)
     
@@ -480,33 +486,38 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
 
         ''' 3.d(pre-4.b) graph filter that reduces node number '''
         project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
+        # using dot diagram which shows the hierarchy of the network
+        pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
+        # pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
         if filter_flag:
             print('\nbefore filter: {:,} nodes, {:,} edges'
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
             # RUNTIME
-            temp_rt_G = filter_by_score(G=project_rt_sub_G, root=pname, keyword=keyword)
+            temp_rt_G = filter_by_score(G=project_rt_sub_G, 
+            ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
             # DEVELOPMENT
-            temp_dev_G = filter_by_score(G=project_dev_sub_G, root=pname, keyword=keyword)
+            temp_dev_G = filter_by_score(G=project_dev_sub_G, 
+            ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
             # COMBINED
             filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
             print('after filter: {:,} nodes, {:,} edges'
                     .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))
+            ''' 4. node link diagram of the filtered dependency network '''
+            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
+                    title='filtered dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
         
         ''' 4. node link diagram of the dependency network '''
-        # using dot diagram which shows the hierarchy of the network
-        pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
-        # pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
                      title='full dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
-        plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
-                     title='minimized dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
 
 def main():
     if len(sys.argv) < 3:
         sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> <filter_flag> <github_url> [<out_folder>(htmls/)]')
     
     keyword = sys.argv[1]
-    filter_flag = True if sys.argv[2] == 'filter=True' else False
+    filter_flag = False
+    if sys.argv[2] in ['filter=True','filter=true','filter=TRUE']:
+        filter_flag = True
 
     if len(sys.argv) == 5:
         out_folder = sys.argv[4]
