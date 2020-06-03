@@ -295,7 +295,7 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
     queue.append(root)
 
     while len(queue) > 0:
-        name = queue.pop()
+        name = queue.pop(0)
         if visited[name]:
             continue
         visited[name] = True

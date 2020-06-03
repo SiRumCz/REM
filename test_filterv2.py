@@ -283,7 +283,7 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
-def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
+def filter_by_score(G: nx.Graph, root: str, keyword: str):
     '''
     minimize graph size
     if the successor node has higher or equal <keyword> score 
@@ -295,7 +295,45 @@ def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
     queue.append(root)
 
     while len(queue) > 0:
-        name = queue.pop()
+        name = queue.pop(0)
+        if visited[name]:
+            continue
+        visited[name] = True
+        meta = G.nodes()[name]
+        if is_valid_key(meta, 'type') \
+        and meta['type'] == 'GITHUB':
+            queue += list(G.neighbors(name))
+            continue
+        score = meta[keyword] if is_valid_key(meta, keyword) else None
+        for dep_name in list(G.neighbors(name)):
+            dep_meta = G.nodes()[dep_name]
+            dep_score = dep_meta[keyword] if dep_meta and is_valid_key(dep_meta, keyword) else None
+            if score and dep_score:
+                if dep_score >= score:
+                    G.remove_edge(name, dep_name)
+                else:
+                    queue.append(dep_name)
+            elif dep_score is None:
+                G.remove_edge(name, dep_name)
+            elif score is None:
+                queue.append(dep_name)
+    
+    return G.subgraph(list(nx.descendants(G, root))+[root])
+
+
+def filter_by_score_v2(G: nx.Graph, ripples: set, root: str, keyword: str):
+    '''
+    minimize graph size
+    if the successor node has higher or equal <keyword> score 
+    -> 
+    filter by removing edge
+    '''
+    visited = {n: False for n in list(G.nodes())}
+    queue = []
+    queue.append(root)
+
+    while len(queue) > 0:
+        name = queue.pop(0)
         if visited[name]:
             continue
         visited[name] = True
@@ -493,11 +531,9 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
             print('\nbefore filter: {:,} nodes, {:,} edges'
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
             # RUNTIME
-            temp_rt_G = filter_by_score(G=project_rt_sub_G, 
-            ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
+            temp_rt_G = filter_by_score(G=project_rt_sub_G.copy(), root=pname, keyword=keyword)
             # DEVELOPMENT
-            temp_dev_G = filter_by_score(G=project_dev_sub_G, 
-            ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
+            temp_dev_G = filter_by_score(G=project_dev_sub_G.copy(), root=pname, keyword=keyword)
             # COMBINED
             filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
             print('after filter: {:,} nodes, {:,} edges'
@@ -505,6 +541,21 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
             ''' 4. node link diagram of the filtered dependency network '''
             plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
                     title='filtered dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
+            # version 2 filter
+            # RUNTIME
+            temp_rt_G = filter_by_score_v2(G=project_rt_sub_G.copy(), 
+            ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
+            # DEVELOPMENT
+            temp_dev_G = filter_by_score_v2(G=project_dev_sub_G.copy(), 
+            ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
+            # COMBINED
+            filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
+            print('after filterv2: {:,} nodes, {:,} edges'
+                    .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))
+            ''' 4. node link diagram of the filtered dependency network '''
+            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
+                    title='filtered_v2 dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min_v2.html')
+            
         
         ''' 4. node link diagram of the dependency network '''
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
