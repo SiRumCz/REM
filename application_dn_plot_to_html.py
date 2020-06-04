@@ -27,9 +27,9 @@ def set_node_color(node: tuple) -> str:
     red     - deprecared :(
     '''
     name, meta = node
-    if meta and meta['type'] == 'GITHUB':
+    if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
         return '#6959CD'
-    return 'red' if meta and meta['deprecated'] else 'green'
+    return 'red' if is_valid_key(data=meta, key='deprecated') and meta['deprecated'] else 'green'
 
 
 def set_node_color_by_scores(node: tuple, key: str) -> str:
@@ -38,7 +38,7 @@ def set_node_color_by_scores(node: tuple, key: str) -> str:
     key: final, popularity, quality, maintenance
     '''
     name, meta = node
-    if meta and meta['type'] == 'GITHUB':
+    if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
         return '#6959CD'
     scale = px.colors.diverging.RdYlGn
     return scale[math.ceil(meta[key]*10)] if (meta and key in meta and meta[key] is not None) else 'black'
@@ -50,7 +50,7 @@ def set_node_marker_size(node: tuple) -> int:
     deprecated size: 15
     '''
     name, meta = node
-    return 15 if meta and is_valid_key(meta, 'deprecated') and meta['deprecated'] else 8
+    return 15 if is_valid_key(meta, 'deprecated') and meta['deprecated'] else 10
 
 
 def set_node_line_width(node: tuple) -> int:
@@ -59,7 +59,7 @@ def set_node_line_width(node: tuple) -> int:
     deprecated size: 3
     '''
     name, meta = node
-    return 3 if meta and is_valid_key(meta, 'deprecated') and meta['deprecated'] else 1
+    return 3 if is_valid_key(meta, 'deprecated') and meta['deprecated'] else 1
 
 
 def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'final', outfile: str = 'temp.html'):
@@ -176,7 +176,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                mode='markers',
                legendgroup="gh_rt",               
                name='runtime packages (red outline means deprecation)',
-               marker=dict(symbol='circle',
+               marker=dict(symbol=[m['symbol'] for x,m in rt_sub_G.nodes(data=True)],
                              size=v_size_gh_rt,
                              opacity=1,
                              color=v_scores_gh_rt,
@@ -199,7 +199,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                mode='markers',
                legendgroup="gh_dev",               
                name='development packages (red outline means deprecation)',
-               marker=dict(symbol='circle',
+               marker=dict(symbol=[m['symbol'] for x,m in dev_sub_G.nodes(data=True)],
                              size=v_size_gh_dev,
                              opacity=1,
                              color=v_scores_gh_dev,
@@ -283,7 +283,7 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
-def filter_by_score(G: nx.Graph, root: str, keyword: str):
+def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
     '''
     minimize graph size
     if the successor node has higher or equal <keyword> score 
@@ -305,59 +305,20 @@ def filter_by_score(G: nx.Graph, root: str, keyword: str):
         and meta['type'] == 'GITHUB':
             queue += list(G.neighbors(name))
             continue
-        score = meta[keyword] if is_valid_key(meta, keyword) else None
+        score = meta[keyword] if keyword in meta else None
         for dep_name in list(G.neighbors(name)):
             dep_meta = G.nodes()[dep_name]
-            dep_score = dep_meta[keyword] if dep_meta and is_valid_key(dep_meta, keyword) else None
+            dep_score = dep_meta[keyword] if keyword in dep_meta else None
             if score and dep_score:
                 if dep_score >= score:
-                    G.remove_edge(name, dep_name)
-                else:
-                    queue.append(dep_name)
-            elif dep_score is None:
-                G.remove_edge(name, dep_name)
-            elif score is None:
-                queue.append(dep_name)
-    
-    return temp_G.subgraph(list(G.subgraph(list(nx.descendants(G, root))+[root]).nodes()))
-
-
-def filter_by_score_v2(G: nx.Graph, ripples: set, root: str, keyword: str):
-    '''
-    minimize graph size
-    if the successor node has higher or equal <keyword> score 
-    -> 
-    filter by removing edge
-    '''
-    temp_G = G.copy() # copy of original graph
-    visited = {n: False for n in list(G.nodes())}
-    queue = []
-    queue.append(root)
-
-    while len(queue) > 0:
-        name = queue.pop(0)
-        if visited[name]:
-            continue
-        visited[name] = True
-        meta = G.nodes()[name]
-        if is_valid_key(meta, 'type') \
-        and meta['type'] == 'GITHUB':
-            queue += list(G.neighbors(name))
-            continue
-        score = meta[keyword] if is_valid_key(meta, keyword) else None
-        for dep_name in list(G.neighbors(name)):
-            dep_meta = G.nodes()[dep_name]
-            dep_score = dep_meta[keyword] if dep_meta and is_valid_key(dep_meta, keyword) else None
-            if score and dep_score:
-                if dep_score >= score:
-                    if (name,dep_name) not in ripples:
+                    if (name, dep_name) not in ripples:
                         G.remove_edge(name, dep_name)
                     else:
                         queue.append(dep_name)
                 else:
                     queue.append(dep_name)
             elif dep_score is None:
-                if (name,dep_name) not in ripples:
+                if (name, dep_name) not in ripples:
                     G.remove_edge(name, dep_name)
                 else:
                     queue.append(dep_name)
@@ -365,6 +326,17 @@ def filter_by_score_v2(G: nx.Graph, ripples: set, root: str, keyword: str):
                 queue.append(dep_name)
 
     return temp_G.subgraph(list(G.subgraph(list(nx.descendants(G, root))+[root]).nodes()))
+
+
+def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
+    for node in full_G:
+        full_G.nodes()[node]['symbol'] = 'circle'
+        if node in filtered_G:
+            full_size = len(list(full_G.neighbors(node)))
+            filtered_size = len(list(filtered_G.neighbors(node)))
+            # if a node in a filtered graph hasless children, then mark it 'circle-cross'
+            filtered_G.nodes()[node]['symbol'] = 'circle-cross' if filtered_size < full_size else 'circle'
+    return
 
 
 def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, filter_flag: bool):
@@ -532,34 +504,23 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
         if filter_flag:
             print('\nbefore filter: {:,} nodes, {:,} edges'
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
-            # RUNTIME
-            temp_rt_G = filter_by_score(G=project_rt_sub_G.copy(), root=pname, keyword=keyword)
-            # DEVELOPMENT
-            temp_dev_G = filter_by_score(G=project_dev_sub_G.copy(), root=pname, keyword=keyword)
-            # COMBINED
-            filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
-            print('after filter: {:,} nodes, {:,} edges'
-                    .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))
-            ''' 4. node link diagram of the filtered dependency network '''
-            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
-                    title='filtered dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
             # version 2 filter
             # RUNTIME
-            temp_rt_G = filter_by_score_v2(G=project_rt_sub_G.copy(), 
+            temp_rt_G = filter_by_score(G=project_rt_sub_G.copy(), 
             ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
             # DEVELOPMENT
-            temp_dev_G = filter_by_score_v2(G=project_dev_sub_G.copy(), 
+            temp_dev_G = filter_by_score(G=project_dev_sub_G.copy(), 
             ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
             # COMBINED
             filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
             print('after filterv2: {:,} nodes, {:,} edges'
-                    .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))
-            ''' 4. node link diagram of the filtered dependency network '''
-            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
-                    title='filtered_v2 dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min_v2.html')
-            
+                    .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))        
         
         ''' 4. node link diagram of the dependency network '''
+        assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
+        if filter_flag:
+            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
+                    title='filtered_v2 dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min_v2.html')
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
                      title='full dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
 
