@@ -229,6 +229,11 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
         paper_bgcolor='white',
         plot_bgcolor='white'
     )
+
+    x_pos_list = [v[0] for v in pos.values()]
+    y_pos_list = [v[1] for v in pos.values()]
+    fig.update_xaxes(range=[min(x_pos_list)-50, max(x_pos_list)+50])
+    fig.update_yaxes(range=[min(y_pos_list)-10, max(y_pos_list)+10])
     
     return fig.write_html(outfile)
 
@@ -513,20 +518,20 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
             ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
             # COMBINED
             filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
-            print('after filterv2: {:,} nodes, {:,} edges'
+            print('after filter: {:,} nodes, {:,} edges'
                     .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))        
         
         ''' 4. node link diagram of the dependency network '''
         assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
         if filter_flag:
             plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
-                    title='filtered_v2 dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min_v2.html')
+                    title='minimized dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
                      title='full dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
 
 def main():
     if len(sys.argv) < 3:
-        sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> <filter_flag> <github_url> [<out_folder>(htmls/)]')
+        sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]')
     
     keyword = sys.argv[1]
     filter_flag = False
