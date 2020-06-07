@@ -232,8 +232,10 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
 
     x_pos_list = [v[0] for v in pos.values()]
     y_pos_list = [v[1] for v in pos.values()]
-    fig.update_xaxes(range=[min(x_pos_list)-50, max(x_pos_list)+50])
-    fig.update_yaxes(range=[min(y_pos_list)-10, max(y_pos_list)+10])
+    xoffset = (max(x_pos_list) - min(x_pos_list)) * 0.05
+    yoffset = (max(y_pos_list) - min(y_pos_list)) * 0.05
+    fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
+    fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
     
     return fig.write_html(outfile)
 
@@ -504,7 +506,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
         ''' 3.d(pre-4.b) graph filter that reduces node number '''
         project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
         # using dot diagram which shows the hierarchy of the network
-        pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot', root=pname)
+        pos = nx.nx_pydot.graphviz_layout(project_sub_G, prog='dot', root=pname)
         # pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
         if filter_flag:
             print('\nbefore filter: {:,} nodes, {:,} edges'
