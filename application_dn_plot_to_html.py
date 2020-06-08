@@ -71,17 +71,20 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     outfile   : output path for html file
     '''
     # separating runtime and development dependency networks
-    rt_nodes_set = set()
-    dev_nodes_set = set()
+    # github software subgraph
+    # RUNTIME
+    rt_sub_G = nx.DiGraph()
+    # DEVELOPMENT
+    dev_sub_G = nx.DiGraph()
     for u,v,m in G.edges(data=True):
-        if 'runtime_constraint' in m:
-            rt_nodes_set.update(nx.descendants(G, v))
-            rt_nodes_set.update([u, v])
-        if 'dev_constraint' in m:
-            dev_nodes_set.update(nx.descendants(G, v))
-            dev_nodes_set.update([u, v])
-    rt_sub_G = G.subgraph(list(rt_nodes_set)).copy()
-    dev_sub_G = G.subgraph(list(dev_nodes_set)).copy()
+        if 'runtime' in m and m['runtime'] is True:
+            rt_sub_G.add_node(u, **G.nodes()[u])
+            rt_sub_G.add_node(v, **G.nodes()[v])
+            rt_sub_G.add_edge(u,v, **m)
+        if 'development' in m and m['development'] is True:
+            dev_sub_G.add_node(u, **G.nodes()[u])
+            dev_sub_G.add_node(v, **G.nodes()[v])
+            dev_sub_G.add_edge(u,v, **m)
     
     Xv_gh_rt=[pos[n][0] for n in list(rt_sub_G.nodes())]
     Yv_gh_rt=[pos[n][1] for n in list(rt_sub_G.nodes())]
@@ -298,41 +301,40 @@ def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
     filter by removing edge
     '''
     temp_G = G.copy() # copy of original graph
-    visited = {n: False for n in list(G.nodes())}
-    queue = []
-    queue.append(root)
+    visited = {n: False for n in list(temp_G.nodes())}
+    queue = [root]
 
     while len(queue) > 0:
         name = queue.pop(0)
         if visited[name]:
             continue
         visited[name] = True
-        meta = G.nodes()[name]
+        meta = temp_G.nodes()[name]
         if is_valid_key(meta, 'type') \
         and meta['type'] == 'GITHUB':
-            queue += list(G.neighbors(name))
+            queue += list(temp_G.neighbors(name))
             continue
         score = meta[keyword] if keyword in meta else None
-        for dep_name in list(G.neighbors(name)):
-            dep_meta = G.nodes()[dep_name]
+        for dep_name in list(temp_G.neighbors(name)):
+            dep_meta = temp_G.nodes()[dep_name]
             dep_score = dep_meta[keyword] if keyword in dep_meta else None
             if score and dep_score:
                 if dep_score >= score:
                     if (name, dep_name) not in ripples:
-                        G.remove_edge(name, dep_name)
+                        temp_G.remove_edge(name, dep_name)
                     else:
                         queue.append(dep_name)
                 else:
                     queue.append(dep_name)
             elif dep_score is None:
                 if (name, dep_name) not in ripples:
-                    G.remove_edge(name, dep_name)
+                    temp_G.remove_edge(name, dep_name)
                 else:
                     queue.append(dep_name)
             elif score is None:
                 queue.append(dep_name)
 
-    return temp_G.subgraph(list(G.subgraph(list(nx.descendants(G, root))+[root]).nodes()))
+    return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
 
 
 def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
@@ -351,13 +353,11 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
     
     ''' pre. check if exists '''
     if pname not in list(G.nodes()):
-        print('\nsoftware not found.')
-        return
+        sys.exit('\nsoftware not found.')
     
     ''' pre. check if keyword is valid '''
     if keyword not in ['final', 'quality', 'popularity', 'maintenance']:
-        print('\ninvalid keyword.')
-        return
+        sys.exit('\ninvalid keyword.')
     
     ''' 1. direct dependencies '''
     dependency_list = list(G.edges(pname, data=True))
@@ -376,30 +376,30 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
         
     ''' 2. transitive dependnecies '''
     # github software subgraph
-
-    rt_trans_nodes_set = set([pname])
-    dev_trans_nodes_set = set([pname])
-    for u,v,m in runtime_dep_list:
-        rt_trans_nodes_set.update(nx.descendants(G, v))
-        rt_trans_nodes_set.add(v)
-    for u,v,m in development_dep_list:
-        dev_trans_nodes_set.update(nx.descendants(G, v))
-        dev_trans_nodes_set.add(v)
     # RUNTIME
-    project_rt_sub_G = G.subgraph(list(rt_trans_nodes_set)).copy()
+    project_rt_sub_G = nx.DiGraph()
     # DEVELOPMENT
-    project_dev_sub_G = G.subgraph(list(dev_trans_nodes_set)).copy()
+    project_dev_sub_G = nx.DiGraph()
+    for u,v,m in G.edges(data=True):
+        if 'runtime' in m and m['runtime'] is True:
+            project_rt_sub_G.add_node(u, **G.nodes()[u])
+            project_rt_sub_G.add_node(v, **G.nodes()[v])
+            project_rt_sub_G.add_edge(u,v, **m)
+        if 'development' in m and m['development'] is True:
+            project_dev_sub_G.add_node(u, **G.nodes()[u])
+            project_dev_sub_G.add_node(v, **G.nodes()[v])
+            project_dev_sub_G.add_edge(u,v, **m)
     
     # print graph shape
     print()
     print('NPM package RUNTIME dependency network for top starred github project ({}) shape:'
     .format(pname))
-    print('edges:', project_rt_sub_G.number_of_edges())
     print('nodes:', project_rt_sub_G.number_of_nodes())
+    print('edges:', project_rt_sub_G.number_of_edges())
     print('NPM package DEVELOPMENT dependency network for top starred github project ({}) shape:'
     .format(pname))
-    print('edges:', project_dev_sub_G.number_of_edges())
     print('nodes:', project_dev_sub_G.number_of_nodes())
+    print('edges:', project_dev_sub_G.number_of_edges())
     
     ''' 3. deprecated packages '''
     print()
@@ -513,11 +513,17 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
             # version 2 filter
             # RUNTIME
-            temp_rt_G = filter_by_score(G=project_rt_sub_G.copy(), 
+            temp_rt_G = filter_by_score(G=project_rt_sub_G, 
             ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
+            for u,v,m in temp_rt_G.edges(data=True):
+                if 'development' in m:
+                    del m['development']
             # DEVELOPMENT
-            temp_dev_G = filter_by_score(G=project_dev_sub_G.copy(), 
+            temp_dev_G = filter_by_score(G=project_dev_sub_G, 
             ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
+            for u,v,m in temp_dev_G.edges(data=True):
+                if 'runtime' in m:
+                    del m['runtime']
             # COMBINED
             filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
             print('after filter: {:,} nodes, {:,} edges'
@@ -530,6 +536,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                     title='minimized dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
                      title='full dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
+    return
 
 def main():
     if len(sys.argv) < 3:
@@ -602,17 +609,27 @@ def main():
     # add github application to the NPM network
     application_name = '{owner}:{repo}({branch})'.format(owner=owner, repo=repo, branch=branch)
     npm_G.add_node(application_name, type='GITHUB')
+    temp_G = npm_G.copy()
     if rt_deps is not None:
         for k, v in rt_deps.items():
-            npm_G.add_edge(application_name, str(k), runtime_constraint=str(v))
+            temp_G.add_edge(application_name, str(k), runtime_constraint=str(v))
+    application_rt_sub_G = temp_G.subgraph(list(nx.descendants(temp_G, application_name))+[application_name]).copy()
+    for ed in application_rt_sub_G.edges():
+        application_rt_sub_G.edges()[ed]['runtime'] = True
+    temp_G = npm_G.copy()
     if dev_deps is not None:
         for k, v in dev_deps.items():
-            npm_G.add_edge(application_name, str(k), dev_constraint=str(v))
-    print('added github application runtime and development dependencies. [{:,}] nodes, [{:,}] edges'
-    .format(npm_G.number_of_nodes(), npm_G.number_of_edges()))
+            temp_G.add_edge(application_name, str(k), dev_constraint=str(v))
+    application_dev_sub_G = temp_G.subgraph(list(nx.descendants(temp_G, application_name))+[application_name]).copy()
+    for ed in application_dev_sub_G.edges():
+        application_dev_sub_G.edges()[ed]['development'] = True
+    npm_G.clear()
+    temp_G.clear()
 
     # create github application sub graph
-    application_sub_G = npm_G.subgraph(list(nx.descendants(npm_G, application_name))+[application_name]).copy()
+    application_sub_G = nx.compose(application_rt_sub_G, application_dev_sub_G).copy()
+    application_rt_sub_G.clear()
+    application_dev_sub_G.clear()
     print('created sub-graph for {}. [{:,}] nodes, [{:,}] edges'
     .format(application_name, application_sub_G.number_of_nodes(), application_sub_G.number_of_edges()))
 
