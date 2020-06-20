@@ -417,6 +417,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
         print('Congratulations! There is no deprecated packages in the software.')
         ''' 4. node link diagram of the dependency network '''
         project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
+        assign_graph_node_symbol(project_sub_G, project_sub_G)
         for pair in list(project_sub_G.edges()):
             project_sub_G.edges()[pair]['color'] = 'grey'
         
