@@ -168,7 +168,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                 y=Yed_github_dev[len(Yed_github_dev)-2:],
                 mode='lines',
                 legendgroup="gh_dev",
-                name="development dependencies relationships (dark-red means is affected by package deprecation)",
+                name="development dependency relationships (dark-red means is affected by library deprecation)",
                 line=dict(color=ed_color_github_dev[len(ed_color_github_dev)-1], width=3.2)
         )]
     
@@ -178,7 +178,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                y=Yv_gh_rt,
                mode='markers',
                legendgroup="gh_rt",               
-               name='runtime packages (red outline means deprecation)',
+               name='runtime dependencies (red outline means deprecation)',
                marker=dict(symbol=[m['symbol'] for x,m in rt_sub_G.nodes(data=True)],
                              size=v_size_gh_rt,
                              opacity=1,
@@ -190,7 +190,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                              cmid=0.5,
                              cmax=1.0,
                              colorbar=dict(
-                                title=dict(text='metric of goodness: '+key, side='right'),
+                                title=dict(text='metric of health: '+key, side='right'),
                                 thickness=10
                              )),
                text=v_text_gh_rt,
@@ -201,7 +201,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                y=Yv_gh_dev,
                mode='markers',
                legendgroup="gh_dev",               
-               name='development packages (red outline means deprecation)',
+               name='development dependencies (red outline means deprecation)',
                marker=dict(symbol=[m['symbol'] for x,m in dev_sub_G.nodes(data=True)],
                              size=v_size_gh_dev,
                              opacity=1,
@@ -213,7 +213,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                              cmid=0.5,
                              cmax=1.0,
                              colorbar=dict(
-                                title=dict(text='metric of goodness: '+key, side='right'),
+                                title=dict(text='metric of health: '+key, side='right'),
                                 thickness=10
                              )),
                text=v_text_gh_dev,
@@ -420,7 +420,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
         # using dot diagram which shows the hierarchy of the network
         dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
         plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
-        title='dependency network for {}'.format(pname), key=keyword, outfile=outfile+'.html')
+        title='REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'.html')
     else:
         ''' 3.a number of deprecated packages '''
         if len(rt_sub_g_deprecated_list) > 0:
@@ -530,9 +530,9 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
         assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
         if True:
             plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
-                    title='minimized dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
+                    title='filtered REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
         plotly_graph_to_html(G=project_sub_G, pos=pos, 
-                     title='full dependency network for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
+                     title='full REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
     return
 
 def main():
@@ -631,7 +631,7 @@ def main():
       outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
       project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword)
 
-    print('exported dependency network to {}.'.format(out_folder))
+    print('exporting REM dependency graph to {}.'.format(out_folder))
 
     conn.close()
 
