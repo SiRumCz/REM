@@ -541,7 +541,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
 
 def main():
     if len(sys.argv) < 3:
-        sys.exit('Usage: python3 application_dn_plot_to_html.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]')
+        sys.exit('Usage: python3 rem_graph_run_single.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]')
     
     keyword = sys.argv[1]
     filter_flag = False
