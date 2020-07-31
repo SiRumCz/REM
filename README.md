@@ -24,5 +24,5 @@ The Docker container includes every environment for REM graph rendering.
  - under current directory, run `docker build .`
  - once the build is finished, run `docker run -it <build id>`
  - in the CLI, run `python3 rem_graph_run_all.py <github_url>`
- - graphs will be created in `\htmls` folder
+ - graphs will be created in `/htmls` folder
  - to export file from docker to local, keep the container running and run `docker cp <container id>:/htmls <target_dir>` from host
