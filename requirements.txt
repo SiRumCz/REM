@@ -1,4 +1,6 @@
 networkx
+requests
+pandas
 graphviz
 plotly
 pydot
