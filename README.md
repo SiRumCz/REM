@@ -13,7 +13,7 @@ demo: http://turingmachine.org/rem_demo/
 |---------|------|--------------|-------------------------------------------------------------|
 | 2GB     | 10GB | Python 3.7.4 | Linux(Ubuntu 18.04)/MacOS(Catalina 10.15.5)/Windows 10 Home |
 
-In this repository, we have provided a compressed database file that we generated on May, 2020. To uncompress it, run command similar to `cat dep_network_npm_search.db.tar.gz.a* | tar xzvf -`. 
+In this repository, we have provided a compressed database file that we generated on May, 2020. To uncompress it, go to `data\` folder and run command similar to `cat dep_network_npm_search.db.tar.gz.a* | tar xzvf -`. 
 
 However, if you wish to collect the latest data, run `python3 preprocess.py` to generate a database that contains the latest NPM pakcages and scores.
 
