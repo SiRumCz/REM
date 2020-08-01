@@ -40,3 +40,8 @@ The Dockerfile includes every environment for REM graph rendering.
     - `rem_graph_run_single.py` allows user to generate REM graph on which metric of health and whether to use Filtering. To run it, run `python3 rem_graph_run_single.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]` where `keyword` is one of the metrics of health (popularity, quality, maintenance, final), `filter=True|False` will toggle the graph filtering. For example, to generate a filtered REM graph with quality metric for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_single.py quality filter=True https://github.com/adobe/brackets`.
 5. REM graphs will be created in `/htmls` folder inside Docker container
 6. to export file from Docker container to local machine, keep the container running and run `docker cp <container id>:/htmls <target_dir>` from host. `container id` can be found by `docker ps`.
+
+#### Notes
+
+ - The process of collecting the latest NPM package and score database with `preprocess.py` heaviliy depends on the internet speed, on a University lab environment, it took 1 to 2 days to finish.
+ - Running `rem_graph_run_all.py` that generates a set of 8 REM graphs on a 16-core Intel Core i9 MacBook Pro will take about 2 minutes to finish.
