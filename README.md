@@ -43,5 +43,5 @@ The Dockerfile includes every environment for REM graph rendering.
 
 #### Notes
 
- - The process of collecting the latest NPM package and score database with `preprocess.py` heaviliy depends on the internet speed, on a University lab environment, it took 1 to 2 days to finish.
+ - The process of collecting the latest NPM package and score database with `preprocess.py` heaviliy depends on the internet speed, on a University lab environment, it usually takes 1 to 2 days to finish.
  - Running `rem_graph_run_all.py` that generates a set of 8 REM graphs on a 16-core Intel Core i9 MacBook Pro will take about 2 minutes to finish.
