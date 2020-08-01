@@ -41,6 +41,8 @@ The Dockerfile includes every environment for REM graph rendering.
 5. REM graphs will be created in `/htmls` folder inside Docker container
 6. to export file from Docker container to local machine, keep the container running and run `docker cp <container id>:/htmls <target_dir>` from host. `container id` can be found by `docker ps`.
 
+A complete Docker image is available on Dockerhub: https://hub.docker.com/repository/docker/sirumcz/rem .
+
 #### Notes
 
  - The process of collecting the latest NPM package and score database with `preprocess.py` heaviliy depends on the internet speed, on a University lab environment, it usually takes 1 to 2 days to finish.
