@@ -34,7 +34,7 @@ The Dockerfile includes every environment for REM graph rendering.
 
 1. Docker requirment: >= 10GB memory. Under `Preference -> Resources` of docker desktop, please set `Memory` to at least 10 GB.
 2. under repo directory, run `docker build .` to build the image.
-3. once the build is finished, run `docker run -it <image id>` where `image id` is the last string generated from the build. This command will bring the user to the CLI of the running Docker container for REM.
+3. once the build is finished, run `docker run -it --name <name> <image id>` to bring the user to the CLI of the running Docker container for REM. `name` is the name of the image which user can reuse later by running `docker start -i <name>` and `image id` is the last string generated from the build.
 4. in the CLI, run `python3 rem_graph_run_all.py <github_url>` to generate all 8 REM graphs, or run `python3 rem_graph_run_single.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]` tp generate single REM graph as what you would do on local machine
 5. REM graphs will be created in `/htmls` folder inside Docker container
 6. to export file from Docker container to local machine, keep the container running and run `docker cp <container id>:/htmls <target_dir>` from host. `container id` can be found by `docker ps`.
