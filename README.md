@@ -1,6 +1,6 @@
 ### Ripple Effect of Metrics dependency graph
 
-GitHub repo: https://github.com/SiRumCz/REM <br>
+GitHub repository link: https://github.com/SiRumCz/REM <br>
 by Zhe Chen (zkchen@uvic.ca) and Daniel M. German (dmg@uvic.ca)
 
 The Ripple Effect of Metrics (REM) graph is a dependency graph designed to help developers identify vulnerable dependencies with lower metric-rating transitive dependencies in their dependency chains.
