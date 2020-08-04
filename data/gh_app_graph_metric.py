@@ -8,10 +8,12 @@ a directory path that contains package.json files for NPM applications
 Stats:
 average (median) direct and transitive (run time and development) dependencies for a set of NPM applications
 
-|        | Direct Runtime | Transitive Runtime | Direct Development | Transitive Development |
-|--------|----------------|--------------------|--------------------|------------------------|
-| Mean   |                |                    |                    |                        |
-| Median |                |                    |                    |                        |
+|         | Direct Runtime | Transitive Runtime | Direct Development | Transitive Development |
+|---------|----------------|--------------------|--------------------|------------------------|
+| Lowest  |                |                    |                    |                        |
+| Highest |                |                    |                    |                        |
+| Mean    |                |                    |                    |                        |
+| Median  |                |                    |                    |                        |
 '''
 
 import sys
@@ -74,16 +76,18 @@ root: str
 -> tuple: (#direct, #transitive)
 '''
 def get_dep_stat_by_list(G: nx.DiGraph, dlist: list, root: str) -> tuple:
+    if not dlist:
+        return (0, 0)
     num_direct = len(dlist)
     G.add_node(root)
     
     for dep in dlist:
         G.add_edge(root, str(dep))
-    sub_G = G.subgraph(list(nx.descendants(G, root))+['root'])
-    output = (num_direct, sub_G.number_of_nodes()-num_direct-1)
+    sub_G = G.subgraph(list(nx.descendants(G, root))+[root])
+    num_tran = max(sub_G.number_of_nodes()-num_direct-1, 0)
     G.remove_node(root)
     
-    return output
+    return (num_direct, num_tran)
 
 
 def get_dep_size_lists(path: str) -> tuple:
@@ -128,12 +132,14 @@ def get_dep_size_lists(path: str) -> tuple:
 
 def report_stats(rt_dep: tuple, dev_dep: tuple):
     table = BeautifulTable()
+    table.rows.append([min(rt_dep[0]), min(rt_dep[1]), min(dev_dep[0]), min(dev_dep[1])])
+    table.rows.append([max(rt_dep[0]), max(rt_dep[1]), max(dev_dep[0]), max(dev_dep[1])])
     table.rows.append([statistics.mean(rt_dep[0]), statistics.mean(rt_dep[1]), 
     statistics.mean(dev_dep[0]), statistics.mean(dev_dep[1])])
     table.rows.append([statistics.median(rt_dep[0]), statistics.median(rt_dep[1]), 
     statistics.median(dev_dep[0]), statistics.median(dev_dep[1])])
     table.columns.header = ['Direct Runtime', 'Transitive Runtime', 'Direct Development', 'Transitive Development']
-    table.rows.header = ['Mean', 'Median']
+    table.rows.header = ['Lowest', 'Highest', 'Mean', 'Median']
     print(table)
 
 if __name__ == '__main__':
