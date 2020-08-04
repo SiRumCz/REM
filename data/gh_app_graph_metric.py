@@ -21,6 +21,7 @@ import json
 import networkx as nx
 import sqlite3
 import statistics
+import csv
 from os import listdir
 from os.path import isfile, isdir, join
 from beautifultable import BeautifulTable
@@ -90,9 +91,17 @@ def get_dep_stat_by_list(G: nx.DiGraph, dlist: list, root: str) -> tuple:
     return (num_direct, num_tran)
 
 
+def test_files(path: str):
+    for fi in listdir(path):
+        if not fi.endswith('package.json') or not isfile(join(path, fi)):
+            continue
+        print(fi)
+
+
 def get_dep_size_lists(path: str) -> tuple:
     file_count = 0
     # tracker = ([0,0], [0,0]) # ([direct runtime, transitive runtime], [direct dev, transitive dev])
+    pkg_names = []
     runtime_dep = ([],[]) # ()
     dev_dep = ([],[])
     node_list, rel_list = get_npm_lists(npm_db)
@@ -101,11 +110,13 @@ def get_dep_size_lists(path: str) -> tuple:
     for fi in listdir(path):
         if not fi.endswith('package.json') or not isfile(join(path, fi)):
             continue
+        name = fi[:len(fi)-13] # len('_package.json') = 13
         file_path = join(path, fi)
         mdata = get_package_json(file_path)
         if mdata is None:
             continue
         file_count += 1
+        pkg_names.append(name)
         # runtime dependencies
         num_direct_rt = 0
         num_transitive_rt = 0
@@ -122,12 +133,11 @@ def get_dep_size_lists(path: str) -> tuple:
             num_direct_dev, num_transitive_dev = get_dep_stat_by_list(npm_G, dep_list, 'application_root')
         dev_dep[0].append(num_direct_dev)
         dev_dep[1].append(num_transitive_dev)
-        name = mdata['name'] if 'name' in mdata and mdata['name'] else 'fi'
         print('[{ind}] name[{name}] #dir_rt[{dr}] #tran_rt[{tr}] #dir_dev[{dd}] #tran_dd[{td}]'
         .format(ind=file_count, name=name, dr=num_direct_rt, tr=num_transitive_rt,
         dd=num_direct_dev, td=num_transitive_dev))
 
-    return (runtime_dep, dev_dep)
+    return (pkg_names, runtime_dep, dev_dep)
 
 
 def report_stats(rt_dep: tuple, dev_dep: tuple):
@@ -142,13 +152,24 @@ def report_stats(rt_dep: tuple, dev_dep: tuple):
     table.rows.header = ['Lowest', 'Highest', 'Mean', 'Median']
     print(table)
 
+def export_csv(names: list, rt_dep: tuple, dev_dep: tuple):
+    if len(names) != len(rt_dep[0]) != len(dev_dep[0]):
+        sys.exit('different size of inputs in export_csv().')
+    with open('npm_dep_sizes.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['pkg_name', 'num_direct_runtime', 'num_trans_runtime', 'num_direct_development', 'num_trans_development'])
+        for i in range(len(names)):
+            writer.writerow([names[i], rt_dep[0][i], rt_dep[1][i], dev_dep[0][i], dev_dep[1][i]])
+    print('exported to csv!')
+
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         sys.exit('Usage: python3 gh_app_graph_metric.py <repo_path> <npm_db>')
     out_path = sys.argv[1]
     npm_db = sys.argv[2]
-    runtime_dep, dev_dep = get_dep_size_lists(out_path)
+    name_list, runtime_dep, dev_dep = get_dep_size_lists(out_path)
     report_stats(runtime_dep, dev_dep)
+    export_csv(name_list, runtime_dep, dev_dep)
 
 
 
