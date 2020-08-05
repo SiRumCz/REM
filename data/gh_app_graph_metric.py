@@ -24,8 +24,6 @@ import statistics
 import csv
 from os import listdir
 from os.path import isfile, isdir, join
-from beautifultable import BeautifulTable
-
 
 def get_package_json(project_path: str):
     if isfile(project_path):
@@ -141,16 +139,22 @@ def get_dep_size_lists(path: str) -> tuple:
 
 
 def report_stats(rt_dep: tuple, dev_dep: tuple):
-    table = BeautifulTable()
-    table.rows.append([min(rt_dep[0]), min(rt_dep[1]), min(dev_dep[0]), min(dev_dep[1])])
-    table.rows.append([max(rt_dep[0]), max(rt_dep[1]), max(dev_dep[0]), max(dev_dep[1])])
-    table.rows.append([statistics.mean(rt_dep[0]), statistics.mean(rt_dep[1]), 
+    columns_header = ['Direct Runtime', 'Transitive Runtime', 'Direct Development', 'Transitive Development']
+    rows_header = ['Lowest', 'Highest', 'Mean', 'Median']
+
+    table_rows = []
+    table_rows.append([min(rt_dep[0]), min(rt_dep[1]), min(dev_dep[0]), min(dev_dep[1])])
+    table_rows.append([max(rt_dep[0]), max(rt_dep[1]), max(dev_dep[0]), max(dev_dep[1])])
+    table_rows.append([statistics.mean(rt_dep[0]), statistics.mean(rt_dep[1]), 
     statistics.mean(dev_dep[0]), statistics.mean(dev_dep[1])])
-    table.rows.append([statistics.median(rt_dep[0]), statistics.median(rt_dep[1]), 
+    table_rows.append([statistics.median(rt_dep[0]), statistics.median(rt_dep[1]), 
     statistics.median(dev_dep[0]), statistics.median(dev_dep[1])])
-    table.columns.header = ['Direct Runtime', 'Transitive Runtime', 'Direct Development', 'Transitive Development']
-    table.rows.header = ['Lowest', 'Highest', 'Mean', 'Median']
-    print(table)
+
+    print(columns_header)
+
+    for ind, rh in enumerate(rows_header):
+        print('{}: {}'.format(rh, table_rows[ind]))
+
 
 def export_csv(names: list, rt_dep: tuple, dev_dep: tuple):
     if len(names) != len(rt_dep[0]) != len(dev_dep[0]):
@@ -161,6 +165,7 @@ def export_csv(names: list, rt_dep: tuple, dev_dep: tuple):
         for i in range(len(names)):
             writer.writerow([names[i], rt_dep[0][i], rt_dep[1][i], dev_dep[0][i], dev_dep[1][i]])
     print('exported to csv!')
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
