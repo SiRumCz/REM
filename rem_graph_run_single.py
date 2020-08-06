@@ -1,3 +1,10 @@
+'''
+author: Zhe Chen (zkchen@uvic.ca)
+
+Description:
+analyze dependencies on an NPM application and generate a 
+Ripple Effect of Metrics (REM) graph with selected metric of health.
+'''
 import networkx as nx # DiGraph
 import sqlite3 # database connection
 import json # dump()
