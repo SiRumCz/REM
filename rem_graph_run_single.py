@@ -387,6 +387,8 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
     project_rt_sub_G = nx.DiGraph()
     # DEVELOPMENT
     project_dev_sub_G = nx.DiGraph()
+    project_rt_sub_G.add_node(pname, **G.nodes()[pname])
+    project_dev_sub_G.add_node(pname, **G.nodes()[pname])
     for u,v,m in G.edges(data=True):
         if 'runtime' in m and m['runtime'] is True:
             project_rt_sub_G.add_node(u, **G.nodes()[u])
