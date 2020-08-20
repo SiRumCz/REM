@@ -744,7 +744,6 @@ def main():
 
     # export dependency network to HTML file
     outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
-    application_sub_G.nodes()['object-keys']['quality'] = 0.1
     project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=filter)
     print('exported REM dependency graph to {}.'.format(out_folder))
 
