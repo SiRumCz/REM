@@ -344,6 +344,105 @@ def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
     return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
 
 
+def clean_cycles(G: nx.DiGraph, source: str):
+    contains_cycle = True
+    while (contains_cycle):
+        try:
+            cycle = nx.find_cycle(G, source)
+            G.remove_edge(cycle[-1][0], cycle[-1][1])
+        except:
+            contains_cycle = False
+
+
+def minimum_in_tree_rec(minimum: dict, G: nx.DiGraph, node: str, keyword: str):
+    meta = G.nodes()[node]
+    score = meta[keyword] if keyword in meta and meta[keyword] else None
+    for n in nx.descendants(G, node):
+        clean_cycles(G, n)
+        if n in minimum:
+            min_n = minimum[n]
+        else:
+            min_n = minimum_in_tree_rec(minimum, G, n, keyword)
+        if min_n and score:
+            score = min(score, min_n)
+    minimum[node] = score
+    return score
+
+
+def filter_by_score_v3(G: nx.Graph, ripples: set, root: str, keyword: str):
+    '''
+    minimize graph size
+    a top-down(BFS) approach
+    if a successor node has higher or equal <keyword> score than its parent
+    -> 
+    filter by removing edge with minimum
+    '''
+    temp_G = G.copy() # copy of original graph
+    minimum = {}
+    minimum_in_tree_rec(minimum, G.copy(), root, keyword)
+    
+    visited = {n: False for n in list(temp_G.nodes())}
+    queue = [root]
+
+    while len(queue) > 0:
+        name = queue.pop(0)
+        if visited[name]:
+            continue
+        visited[name] = True
+        meta = temp_G.nodes()[name]
+        if is_valid_key(meta, 'type') \
+        and meta['type'] == 'GITHUB':
+            queue += list(temp_G.neighbors(name))
+            continue
+        score = meta[keyword] if keyword in meta else None
+        for dep_name in list(temp_G.neighbors(name)):
+            dep_meta = temp_G.nodes()[dep_name]
+            dep_score = minimum[dep_name]
+            if score and dep_score and dep_score >= score and (name, dep_name) not in ripples:
+                        temp_G.remove_edge(name, dep_name)
+            else:
+                queue.append(dep_name)
+
+    return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
+
+
+def filter_by_score_v2(G: nx.Graph, ripples: set, root: str, keyword: str):
+    '''
+    minimize graph size
+    a bottom-up approach
+    if an successor node has higher or equal <keyword> score than its parent
+    -> 
+    filter by removing edge with minimum
+    '''
+    temp_G = G.copy() # copy of original graph
+    minimum = {}
+    minimum_in_tree_rec(minimum, G.copy(), root, keyword) # minumum metric in each subgraph
+    visited = {n: False for n in list(temp_G.nodes())}
+    queue = [x for x in temp_G.nodes() if temp_G.out_degree(x)==0]
+
+    while len(queue) > 0:
+        name = queue.pop(0)
+        if visited[name]:
+            continue
+        visited[name] = True
+        meta = temp_G.nodes()[name]
+        if is_valid_key(meta, 'type') \
+        and meta['type'] == 'GITHUB':
+            continue
+        # score = meta[keyword] if keyword in meta else None
+        score = minimum[name]
+        for p_name in list(temp_G.predecessors(name)):
+            p_meta = temp_G.nodes()[p_name]
+            p_score = p_meta[keyword] if keyword in p_meta else None
+            if score and p_score:
+                if score >= p_score and (p_name, name) not in ripples:
+                    if temp_G.out_degree(name) == 0:
+                        temp_G.remove_edge(p_name, name)
+            queue.append(p_name)
+
+    return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
+
+
 def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
     for node in full_G:
         full_G.nodes()[node]['symbol'] = 'circle'
@@ -427,7 +526,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
             project_sub_G.edges()[pair]['color'] = 'grey'
         
         # using dot diagram which shows the hierarchy of the network
-        dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot')
+        dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot', root=pname)
         plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
         title='REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'.html')
     else:
@@ -519,13 +618,13 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
             # version 2 filter
             # RUNTIME
-            temp_rt_G = filter_by_score(G=project_rt_sub_G, 
+            temp_rt_G = filter_by_score_v2(G=project_rt_sub_G, 
             ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
             for u,v,m in temp_rt_G.edges(data=True):
                 if 'development' in m:
                     del m['development']
             # DEVELOPMENT
-            temp_dev_G = filter_by_score(G=project_dev_sub_G, 
+            temp_dev_G = filter_by_score_v2(G=project_dev_sub_G, 
             ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
             for u,v,m in temp_dev_G.edges(data=True):
                 if 'runtime' in m:
