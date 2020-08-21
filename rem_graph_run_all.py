@@ -504,6 +504,12 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
     .format(pname))
     print('nodes:', project_dev_sub_G.number_of_nodes())
     print('edges:', project_dev_sub_G.number_of_edges())
+
+    # DEVELOPMENT and RUNTIME ripple effect edges and nodes set
+    rt_ripple_effect_edges = set()
+    rt_ripple_effect_nodes = set()
+    dev_ripple_effect_edges = set()
+    dev_ripple_effect_nodes = set()
     
     ''' 3. deprecated packages '''
     print()
@@ -520,14 +526,43 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
     if (len(rt_sub_g_deprecated_list) == 0 and len(dev_sub_g_deprecated_list) == 0):
         print('Congratulations! There is no deprecated packages in the software.')
         ''' 4. node link diagram of the dependency network '''
+        for pair in list(project_rt_sub_G.edges()):
+            project_rt_sub_G.edges()[pair]['color'] = 'lightgrey'
+
+        for pair in list(project_dev_sub_G.edges()):
+            project_dev_sub_G.edges()[pair]['color'] = 'lightgrey'
+        
         project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
-        assign_graph_node_symbol(project_sub_G, project_sub_G)
-        for pair in list(project_sub_G.edges()):
-            project_sub_G.edges()[pair]['color'] = 'grey'
         
         # using dot diagram which shows the hierarchy of the network
-        dot_pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot', root=pname)
-        plotly_graph_to_html(G=project_sub_G, pos=dot_pos, 
+        pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot', root=pname)
+        if True:
+            print('\nbefore filter: {:,} nodes, {:,} edges'
+                    .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
+            # version 2 filter
+            # RUNTIME
+            temp_rt_G = filter_by_score_v2(G=project_rt_sub_G, 
+            ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
+            for u,v,m in temp_rt_G.edges(data=True):
+                if 'development' in m:
+                    del m['development']
+            # DEVELOPMENT
+            temp_dev_G = filter_by_score_v2(G=project_dev_sub_G, 
+            ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
+            for u,v,m in temp_dev_G.edges(data=True):
+                if 'runtime' in m:
+                    del m['runtime']
+            # COMBINED
+            filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
+            print('after filter: {:,} nodes, {:,} edges'
+                    .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))        
+        
+        ''' 4. node link diagram of the dependency network '''
+        assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
+        if True:
+            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
+                    title='filtered REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
+        plotly_graph_to_html(G=project_sub_G, pos=pos, 
         title='REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'.html')
     else:
         ''' 3.a number of deprecated packages '''
@@ -552,8 +587,6 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
             
         ''' 3.b number of affect edges '''
         # RUNTIME
-        rt_ripple_effect_edges = set()
-        rt_ripple_effect_nodes = set()
         if len(rt_sub_g_deprecated_list) > 0:
             print('\nRUNTIME:')
             for deprecated_name, meta in rt_sub_g_deprecated_list:  
@@ -576,8 +609,6 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str):
                       len(rt_sub_g_deprecated_list)))
         
         # DEVELOPMENT
-        dev_ripple_effect_edges = set()
-        dev_ripple_effect_nodes = set()
         if len(dev_sub_g_deprecated_list) > 0: 
             print('\nDEVELOPMENT:')
             for deprecated_name, meta in dev_sub_g_deprecated_list:  
