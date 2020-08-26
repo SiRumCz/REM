@@ -8,7 +8,7 @@ import networkx as nx
 from utils import is_valid_key
 
 
-def filter_by_score(G: nx.Graph, ripples: set, root: str, keyword: str):
+def filter_pre_order(G: nx.Graph, ripples: set, root: str, keyword: str):
     '''
     minimize graph size
     if the successor node has higher or equal <keyword> score 
@@ -77,44 +77,7 @@ def minimum_in_tree_rec(minimum: dict, G: nx.DiGraph, node: str, keyword: str):
     return score
 
 
-def filter_by_score_v3(G: nx.Graph, ripples: set, root: str, keyword: str):
-    '''
-    minimize graph size
-    a top-down(BFS) approach
-    if a successor node has higher or equal <keyword> score than its parent
-    -> 
-    filter by removing edge with minimum
-    '''
-    temp_G = G.copy() # copy of original graph
-    minimum = {}
-    minimum_in_tree_rec(minimum, G.copy(), root, keyword)
-    
-    visited = {n: False for n in list(temp_G.nodes())}
-    queue = [root]
-
-    while len(queue) > 0:
-        name = queue.pop(0)
-        if visited[name]:
-            continue
-        visited[name] = True
-        meta = temp_G.nodes()[name]
-        if is_valid_key(meta, 'type') \
-        and meta['type'] == 'GITHUB':
-            queue += list(temp_G.neighbors(name))
-            continue
-        score = meta[keyword] if keyword in meta else None
-        for dep_name in list(temp_G.neighbors(name)):
-            dep_meta = temp_G.nodes()[dep_name]
-            dep_score = minimum[dep_name]
-            if score and dep_score and dep_score >= score and (name, dep_name) not in ripples:
-                        temp_G.remove_edge(name, dep_name)
-            else:
-                queue.append(dep_name)
-
-    return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
-
-
-def filter_by_score_v2(G: nx.Graph, ripples: set, root: str, keyword: str):
+def filter_post_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str):
     '''
     minimize graph size
     a bottom-up approach
@@ -147,5 +110,42 @@ def filter_by_score_v2(G: nx.Graph, ripples: set, root: str, keyword: str):
                     if temp_G.out_degree(name) == 0:
                         temp_G.remove_edge(p_name, name)
             queue.append(p_name)
+
+    return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
+
+
+def filter_pre_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str):
+    '''
+    minimize graph size
+    a top-down(BFS) approach
+    if a successor node has higher or equal <keyword> score than its parent
+    -> 
+    filter by removing edge with minimum
+    '''
+    temp_G = G.copy() # copy of original graph
+    minimum = {}
+    minimum_in_tree_rec(minimum, G.copy(), root, keyword)
+    
+    visited = {n: False for n in list(temp_G.nodes())}
+    queue = [root]
+
+    while len(queue) > 0:
+        name = queue.pop(0)
+        if visited[name]:
+            continue
+        visited[name] = True
+        meta = temp_G.nodes()[name]
+        if is_valid_key(meta, 'type') \
+        and meta['type'] == 'GITHUB':
+            queue += list(temp_G.neighbors(name))
+            continue
+        score = meta[keyword] if keyword in meta else None
+        for dep_name in list(temp_G.neighbors(name)):
+            dep_meta = temp_G.nodes()[dep_name]
+            dep_score = minimum[dep_name]
+            if score and dep_score and dep_score >= score and (name, dep_name) not in ripples:
+                        temp_G.remove_edge(name, dep_name)
+            else:
+                queue.append(dep_name)
 
     return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()

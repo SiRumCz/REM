@@ -110,13 +110,13 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
             # version 2 filter
             # RUNTIME
-            temp_rt_G = filter_by_score_v2(G=project_rt_sub_G, 
+            temp_rt_G = filter_post_order_minimum(G=project_rt_sub_G, 
             ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
             for u,v,m in temp_rt_G.edges(data=True):
                 if 'development' in m:
                     del m['development']
             # DEVELOPMENT
-            temp_dev_G = filter_by_score_v2(G=project_dev_sub_G, 
+            temp_dev_G = filter_post_order_minimum(G=project_dev_sub_G, 
             ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
             for u,v,m in temp_dev_G.edges(data=True):
                 if 'runtime' in m:
@@ -218,13 +218,13 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
             # version 2 filter
             # RUNTIME
-            temp_rt_G = filter_by_score_v2(G=project_rt_sub_G, 
+            temp_rt_G = filter_post_order_minimum(G=project_rt_sub_G, 
             ripples=rt_ripple_effect_edges, root=pname, keyword=keyword)
             for u,v,m in temp_rt_G.edges(data=True):
                 if 'development' in m:
                     del m['development']
             # DEVELOPMENT
-            temp_dev_G = filter_by_score_v2(G=project_dev_sub_G, 
+            temp_dev_G = filter_post_order_minimum(G=project_dev_sub_G, 
             ripples=dev_ripple_effect_edges, root=pname, keyword=keyword)
             for u,v,m in temp_dev_G.edges(data=True):
                 if 'runtime' in m:
