@@ -49,6 +49,11 @@ def create_graph(node_list: list, dep_rel_list: list) -> nx.DiGraph:
     for pkg in node_list:
         name, latest, deprecated, final, popularity, quality, maintenance = pkg
         deprecated = True if (deprecated == 1) else False
+        # round scores to 2 decimal place
+        final = round(final, 2) if final else final
+        popularity = round(popularity, 2) if popularity else popularity
+        maintenance = round(maintenance, 2) if maintenance else maintenance
+        quality = round(quality, 2) if quality else quality
         npm_G.add_node(name, version=latest, deprecated=deprecated, final=final, 
                    popularity=popularity, quality=quality, maintenance=maintenance, type='NPM')
     # connect packages according to their dependency relationships

@@ -14,14 +14,12 @@ from utils import *
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit('Usage: python3 rem_graph_run_all.py <github_url> [<out_folder>(htmls/)]')
-    
-
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 2:
+        out_folder = 'htmls'
+    elif len(sys.argv) == 3:
         out_folder = sys.argv[2]
     else:
-        out_folder = 'htmls'
+        sys.exit('Usage: python3 rem_graph_run_all.py <github_url> [<out_folder>(htmls/)]')
 
     dbfile = os.path.join('data', 'dep_network_npm_search.db') # sqlite3 dependency network database
 
