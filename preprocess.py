@@ -10,6 +10,7 @@ import sys # args
 import sqlite3 # connection
 import json # dump
 import requests
+from utils import is_valid_key
 
 
 def beautify_json(data:dict) -> str:
@@ -18,12 +19,6 @@ def beautify_json(data:dict) -> str:
     '''
     return json.dumps(data, indent=2)
 
-
-def is_valid_key(data: dict, key: str) -> bool:
-    '''
-    check if key is valid
-    '''
-    return data and key and (key in data) and (data[key])
 
 def create_tables(conn: sqlite3.Connection):
     dncur = conn.cursor()
