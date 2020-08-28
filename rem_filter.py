@@ -77,6 +77,10 @@ def minimum_in_tree_rec(minimum: dict, G: nx.DiGraph, node: str, keyword: str):
     return score
 
 
+def is_collapsed(a, b) -> bool:
+    return a >= (0.9 * b) # difference threshold of 90%
+
+
 def filter_post_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str):
     '''
     minimize graph size
@@ -106,7 +110,7 @@ def filter_post_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str
             p_meta = temp_G.nodes()[p_name]
             p_score = p_meta[keyword] if keyword in p_meta else None
             if score and p_score:
-                if score >= p_score and (p_name, name) not in ripples:
+                if (p_name, name) not in ripples and is_collapsed(score, p_score):
                     if temp_G.out_degree(name) == 0:
                         temp_G.remove_edge(p_name, name)
             queue.append(p_name)
