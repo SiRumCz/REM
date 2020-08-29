@@ -153,3 +153,21 @@ def filter_pre_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str)
                 queue.append(dep_name)
 
     return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
+
+
+def gray_out_non_problematics(G: nx.Graph, root: str, keyword: str):
+    '''
+    in a filtered REM, non-problematic nodes will be grayed-out to highlight problematic transitive
+    dependencies
+    '''
+    dir_dependencies = list(G.neighbors(root))
+    for node in G.nodes():
+        if (node in dir_dependencies+[root]):
+            continue
+        if not is_valid_key(G.nodes()[node], keyword):
+            continue
+        predecessors_in_dir = [G.nodes()[n][keyword] for n in G.predecessors(node) \
+            if n in dir_dependencies and is_valid_key(G.nodes()[n], keyword)]
+        if predecessors_in_dir and G.nodes()[node][keyword] > max(predecessors_in_dir):
+            G.nodes()[node]['non_problematic'] = True
+    return

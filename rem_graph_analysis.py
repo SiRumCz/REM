@@ -12,17 +12,6 @@ import sys
 import json # dump()
 
 
-def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
-    for node in full_G:
-        full_G.nodes()[node]['symbol'] = 'circle'
-        if node in filtered_G:
-            full_size = len(list(full_G.neighbors(node)))
-            filtered_size = len(list(filtered_G.neighbors(node)))
-            # if a node in a filtered graph hasless children, then mark it 'circle-cross'
-            filtered_G.nodes()[node]['symbol'] = 'circle-cross' if filtered_size < full_size else 'circle'
-    return
-
-
 def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, filter_flag: bool):
     print('NPM software:', pname)
     
@@ -45,7 +34,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
     for u,v,m in development_dep_list:
         print('{} : {}'.format(v,m['dev_constraint']))
         
-    ''' 2. transitive dependnecies '''
+    ''' 2. transitive dependencies '''
     # github software subgraph
     # RUNTIME
     project_rt_sub_G = nx.DiGraph()
@@ -65,11 +54,11 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
     
     # print graph shape
     print()
-    print('NPM package RUNTIME dependency network for top starred github project ({}) shape:'
+    print('NPM package RUNTIME dependency graph for top starred github project ({}) shape:'
     .format(pname))
     print('nodes:', project_rt_sub_G.number_of_nodes())
     print('edges:', project_rt_sub_G.number_of_edges())
-    print('NPM package DEVELOPMENT dependency network for top starred github project ({}) shape:'
+    print('NPM package DEVELOPMENT dependency graph for top starred github project ({}) shape:'
     .format(pname))
     print('nodes:', project_dev_sub_G.number_of_nodes())
     print('edges:', project_dev_sub_G.number_of_edges())
@@ -94,7 +83,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
             
     if (len(rt_sub_g_deprecated_list) == 0 and len(dev_sub_g_deprecated_list) == 0):
         print('Congratulations! There is no deprecated packages in the software.')
-        ''' 4. node link diagram of the dependency network '''
+        ''' 4. node link diagram of the dependency graph '''
         for pair in list(project_rt_sub_G.edges()):
             project_rt_sub_G.edges()[pair]['color'] = 'lightgrey'
 
@@ -103,7 +92,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
         
         project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
         
-        # using dot diagram which shows the hierarchy of the network
+        # using dot diagram which shows the hierarchy of the graph
         pos = nx.nx_pydot.pydot_layout(project_sub_G, prog='dot', root=pname)
         if filter_flag:
             print('\nbefore filter: {:,} nodes, {:,} edges'
@@ -126,7 +115,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
             print('after filter: {:,} nodes, {:,} edges'
                     .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))        
         
-        ''' 4. node link diagram of the dependency network '''
+        ''' 4. node link diagram of the dependency graph '''
         assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
         if filter_flag:
             plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
@@ -136,10 +125,10 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
     else:
         ''' 3.a number of deprecated packages '''
         if len(rt_sub_g_deprecated_list) > 0:
-            print('There is(are) **{:,}** deprecated package(s) in the RUNTIME network:'
+            print('There is(are) **{:,}** deprecated package(s) in the RUNTIME:'
               .format(len(rt_sub_g_deprecated_list)))
         if len(dev_sub_g_deprecated_list) > 0:
-            print('There is(are) **{:,}** deprecated package(s) in the DEVELOPMENT network:'
+            print('There is(are) **{:,}** deprecated package(s) in the DEVELOPMENT:'
               .format(len(dev_sub_g_deprecated_list)))
         
         # RUNTIME
@@ -167,12 +156,12 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                         rt_ripple_effect_edges.add((path[i], path[i + 1]))
         
             print(\
-        '**{:,}** nodes ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the network.'
+        '**{:,}** nodes ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the graph.'
               .format(len(rt_ripple_effect_nodes),
                       100 * len(rt_ripple_effect_nodes) / project_rt_sub_G.number_of_nodes(),
                       len(rt_sub_g_deprecated_list)))
             print(\
-        '**{:,}** edges ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the network.'
+        '**{:,}** edges ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the graph.'
               .format(len(rt_ripple_effect_edges),
                       100 * len(rt_ripple_effect_edges) / project_rt_sub_G.number_of_edges(),
                       len(rt_sub_g_deprecated_list)))
@@ -189,17 +178,17 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                         dev_ripple_effect_edges.add((path[i], path[i + 1]))
         
             print(\
-        '**{:,}** nodes ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the network.'
+        '**{:,}** nodes ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the graph.'
               .format(len(dev_ripple_effect_nodes),
                       100 * len(dev_ripple_effect_nodes) / project_dev_sub_G.number_of_nodes(),
                       len(dev_sub_g_deprecated_list)))
             print(\
-        '**{:,}** edges ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the network.'
+        '**{:,}** edges ({:.2f}%) affected by ripple effect by the deprecation of {:,} packages in the graph.'
               .format(len(dev_ripple_effect_edges),
                       100 * len(dev_ripple_effect_edges) / project_dev_sub_G.number_of_edges(),
                       len(dev_sub_g_deprecated_list)))
 
-        ''' 3.c(pre-4.a) adding color attributes on the edges for network '''
+        ''' 3.c(pre-4.a) adding color attributes on the edges for graph '''
         for pair in list(project_rt_sub_G.edges()):
             project_rt_sub_G.edges()[pair]['color'] = 'lightgrey'\
             if pair not in rt_ripple_effect_edges else '#8b0000'
@@ -210,7 +199,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
 
         ''' 3.d(pre-4.b) graph filter that reduces node number '''
         project_sub_G = nx.compose(project_rt_sub_G, project_dev_sub_G)
-        # using dot diagram which shows the hierarchy of the network
+        # using dot diagram which shows the hierarchy of the graph
         pos = nx.nx_pydot.graphviz_layout(project_sub_G, prog='dot', root=pname)
         # pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
         if filter_flag:
@@ -231,10 +220,11 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
                     del m['runtime']
             # COMBINED
             filtered_project_sub_G = nx.compose(temp_rt_G, temp_dev_G)
+            gray_out_non_problematics(G=filtered_project_sub_G, root=pname, keyword=keyword)
             print('after filter: {:,} nodes, {:,} edges'
                     .format(filtered_project_sub_G.number_of_nodes(), filtered_project_sub_G.number_of_edges()))        
-        
-        ''' 4. node link diagram of the dependency network '''
+
+        ''' 4. node link diagram of the dependency graph '''
         assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
         if filter_flag:
             plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 

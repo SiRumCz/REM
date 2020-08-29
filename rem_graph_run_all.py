@@ -25,7 +25,7 @@ def main():
 
     # check if file exists
     if not os.path.isfile(dbfile):
-        sys.exit('dependency network database not found, please run preprocess fisrt')
+        sys.exit('dependency database not found, please run preprocess fisrt')
     
     # parse github repo and split into owner, repo, and branch 
     repo_url = sys.argv[1]
@@ -64,7 +64,7 @@ def main():
     print('done. [{:,}]'.format(len(npm_dep_list)))
 
     # create di-graph to store npm package network
-    print('creating NPM dependency network..', end='')
+    print('creating NPM dependency graph..', end='')
     npm_G = create_graph(npm_with_deprecated_list, npm_dep_list)
     print('done. [{:,}] nodes, [{:,}] edges'
     .format(npm_G.number_of_nodes(), npm_G.number_of_edges()))
@@ -102,12 +102,11 @@ def main():
     print('created sub-graph for {}. [{:,}] nodes, [{:,}] edges'
     .format(application_name, application_sub_G.number_of_nodes(), application_sub_G.number_of_edges()))
 
-    # export dependency network to HTML file
-    print('exporting REM dependency graphs to {}.'.format(out_folder))
-
+    # export dependency graph to HTML file
     for keyword in ['final', 'popularity', 'quality', 'maintenance']:
       outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
       project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=True)
+    print('exported REM dependency graphs to {}.'.format(out_folder))
 
     conn.close()
     return

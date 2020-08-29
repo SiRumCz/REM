@@ -22,7 +22,11 @@ def dict_to_text(node: tuple, key: str) -> str:
     return s
 
 
-def set_node_color(node: tuple) -> str:
+def set_scalecolor(val) -> str:
+    scale = px.colors.diverging.RdYlGn
+    return scale[val]
+
+def set_node_color(node: tuple, key: str) -> str:
     '''
     #6959CD - software
     green   - active     :)
@@ -31,7 +35,10 @@ def set_node_color(node: tuple) -> str:
     name, meta = node
     if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
         return '#6959CD'
-    return 'red' if is_valid_key(data=meta, key='deprecated') and meta['deprecated'] else 'green'
+    elif is_valid_key(data=meta, key='non_problematic') and meta['non_problematic'] == True:
+        return set_scalecolor(math.ceil(meta[key]*10))
+    else:
+        return 'red' if is_valid_key(data=meta, key='deprecated') and meta['deprecated'] else 'green'
 
 
 def set_node_color_by_scores(node: tuple, key: str) -> str:
@@ -42,8 +49,10 @@ def set_node_color_by_scores(node: tuple, key: str) -> str:
     name, meta = node
     if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
         return '#6959CD'
-    scale = px.colors.diverging.RdYlGn
-    return scale[math.ceil(meta[key]*10)] if (meta and key in meta and meta[key] is not None) else 'black'
+    elif is_valid_key(data=meta, key='non_problematic') and meta['non_problematic'] == True:
+        return 'white'
+    else:
+        return set_scalecolor(math.ceil(meta[key]*10)) if (meta and key in meta and meta[key] is not None) else 'black'
 
 
 def set_node_marker_size(node: tuple) -> int:
@@ -92,10 +101,10 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     Yv_gh_rt=[pos[n][1] for n in list(rt_sub_G.nodes())]
     Xv_gh_dev=[pos[n][0] for n in list(dev_sub_G.nodes())]
     Yv_gh_dev=[pos[n][1] for n in list(dev_sub_G.nodes())]
-    # vertice color lists (fill or line)
-    v_color_gh_rt=[set_node_color(n) for n in list(rt_sub_G.nodes(data=True))]
-    v_color_gh_dev=[set_node_color(n) for n in list(dev_sub_G.nodes(data=True))]
-    # vertice node color based on scores system (fill or line)
+    # vertice color lists (line)
+    v_color_gh_rt=[set_node_color(n, key) for n in list(rt_sub_G.nodes(data=True))]
+    v_color_gh_dev=[set_node_color(n, key) for n in list(dev_sub_G.nodes(data=True))]
+    # vertice node color based on scores system (fill)
     v_scores_gh_rt=[set_node_color_by_scores(n, key) for n in list(rt_sub_G.nodes(data=True))]
     v_scores_gh_dev=[set_node_color_by_scores(n, key) for n in list(dev_sub_G.nodes(data=True))]
     # vertice size
@@ -243,3 +252,14 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
     
     return fig.write_html(outfile)
+
+
+def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
+    for node in full_G:
+        full_G.nodes()[node]['symbol'] = 'circle'
+        if node in filtered_G:
+            full_size = len(list(full_G.neighbors(node)))
+            filtered_size = len(list(filtered_G.neighbors(node)))
+            # if a node in a filtered graph hasless children, then mark it 'circle-cross'
+            filtered_G.nodes()[node]['symbol'] = 'circle-cross' if filtered_size < full_size else 'circle'
+    return
