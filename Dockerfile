@@ -6,9 +6,11 @@ COPY data/dep_network_npm_search.db /data/dep_network_npm_search.db
 COPY requirements.txt /requirements.txt
 # preprocessing script
 COPY preprocess.py /preprocess.py
-# single REM generator script
+# REM generator scripts
+COPY rem_filter.py /rem_filter.py
+COPY rem_graph_analysis.py /rem_graph_analysis.py
+COPY rem_graphics.py /rem_graphics.py
 COPY rem_graph_run_single.py /rem_graph_run_single.py
-# all REM generator script
 COPY rem_graph_run_all.py /rem_graph_run_all.py
 
 # output folder
