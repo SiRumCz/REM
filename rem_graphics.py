@@ -12,12 +12,13 @@ import networkx as nx
 
 
 def dict_to_text(node: tuple, key: str) -> str:
+    out_list = ['final', 'quality', 'popularity', 'maintenance', 'type', 'version']
     name, d = node
     s = '<b>'+name+'</b>'
     for k,v in sorted(d.items()):
         if k == key:
             s += '<br><b><i>{}</i></b>: {}'.format(k, v)
-        else:
+        elif k in out_list:
             s += '<br><b>{}</b>: {}'.format(k, v)
     return s
 

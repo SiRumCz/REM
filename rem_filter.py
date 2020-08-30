@@ -62,7 +62,10 @@ def clean_cycles(G: nx.DiGraph, source: str):
             contains_cycle = False
 
 
-def minimum_in_tree_rec(minimum: dict, G: nx.DiGraph, node: str, keyword: str):
+def minimum_in_subgraph_rec(minimum: dict, G: nx.DiGraph, node: str, keyword: str):
+    '''
+    compute minimum metric node in a subgraph
+    '''
     meta = G.nodes()[node]
     score = meta[keyword] if keyword in meta and meta[keyword] else None
     for n in nx.descendants(G, node):
@@ -70,7 +73,7 @@ def minimum_in_tree_rec(minimum: dict, G: nx.DiGraph, node: str, keyword: str):
         if n in minimum:
             min_n = minimum[n]
         else:
-            min_n = minimum_in_tree_rec(minimum, G, n, keyword)
+            min_n = minimum_in_subgraph_rec(minimum, G, n, keyword)
         if min_n and score:
             score = min(score, min_n)
     minimum[node] = score
@@ -91,7 +94,7 @@ def filter_post_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str
     '''
     temp_G = G.copy() # copy of original graph
     minimum = {}
-    minimum_in_tree_rec(minimum, G.copy(), root, keyword) # minumum metric in each subgraph
+    minimum_in_subgraph_rec(minimum, G.copy(), root, keyword) # minumum metric in each subgraph
     visited = {n: False for n in list(temp_G.nodes())}
     queue = [x for x in temp_G.nodes() if temp_G.out_degree(x)==0]
 
@@ -128,7 +131,7 @@ def filter_pre_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str)
     '''
     temp_G = G.copy() # copy of original graph
     minimum = {}
-    minimum_in_tree_rec(minimum, G.copy(), root, keyword)
+    minimum_in_subgraph_rec(minimum, G.copy(), root, keyword)
     
     visited = {n: False for n in list(temp_G.nodes())}
     queue = [root]
@@ -157,17 +160,19 @@ def filter_pre_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str)
 
 def gray_out_non_problematics(G: nx.Graph, root: str, keyword: str):
     '''
-    in a filtered REM, non-problematic nodes will be grayed-out to highlight problematic transitive
+    in a filtered REM, non-problematic nodes will be grayed-out to emphasize problematic transitive
     dependencies
     '''
     dir_dependencies = list(G.neighbors(root))
     for node in G.nodes():
+        if is_valid_key(G.nodes()[node], 'deprecated') and G.nodes()[node]['deprecated'] == True:
+            continue
         if (node in dir_dependencies+[root]):
             continue
         if not is_valid_key(G.nodes()[node], keyword):
             continue
-        predecessors_in_dir = [G.nodes()[n][keyword] for n in G.predecessors(node) \
+        predecessors_in_dir = [G.nodes()[n][keyword] for n in nx.ancestors(G, node) \
             if n in dir_dependencies and is_valid_key(G.nodes()[n], keyword)]
-        if predecessors_in_dir and G.nodes()[node][keyword] > max(predecessors_in_dir):
+        if predecessors_in_dir and round(G.nodes()[node][keyword], 1) >= round(max(predecessors_in_dir), 1):
             G.nodes()[node]['non_problematic'] = True
     return
