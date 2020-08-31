@@ -27,6 +27,7 @@ def set_scalecolor(val) -> str:
     scale = px.colors.diverging.RdYlGn
     return scale[val]
 
+
 def set_node_color(node: tuple, key: str) -> str:
     '''
     #6959CD - software
@@ -37,7 +38,7 @@ def set_node_color(node: tuple, key: str) -> str:
     if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
         return '#6959CD'
     elif is_valid_key(data=meta, key='non_problematic') and meta['non_problematic'] == True:
-        return set_scalecolor(math.ceil(meta[key]*10))
+        return set_scalecolor(math.ceil(meta[key]*10)) if (meta and key in meta and meta[key] is not None) else 'black'
     else:
         return 'red' if is_valid_key(data=meta, key='deprecated') and meta['deprecated'] else 'green'
 
