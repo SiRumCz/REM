@@ -12,7 +12,7 @@ import networkx as nx
 
 
 def dict_to_text(node: tuple, key: str) -> str:
-    out_list = ['final', 'quality', 'popularity', 'maintenance', 'type', 'version']
+    out_list = ['final', 'quality', 'popularity', 'maintenance', 'type', 'version', 'deprecated']
     name, d = node
     s = '<b>'+name+'</b>'
     for k,v in sorted(d.items()):
