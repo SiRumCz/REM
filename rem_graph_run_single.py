@@ -9,6 +9,7 @@ import sqlite3 # database connection
 import sys # exit, argv
 import os # path.join, isfile
 from rem_graph_analysis import project_graph_analysis
+from plain_graph_run import draw_plain_dependency_graph
 from utils import *
 
 
@@ -108,6 +109,7 @@ def main():
     .format(application_name, application_sub_G.number_of_nodes(), application_sub_G.number_of_edges()))
 
     # export dependency graph to HTML file
+    # draw_plain_dependency_graph(G=application_sub_G, pname=application_name, outfile=os.path.join(out_folder, f'{application_name}_plain_graph.html'))
     outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
     project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=filter_flag)
     print('exported REM dependency graph to {}.'.format(out_folder))

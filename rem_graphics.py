@@ -58,6 +58,16 @@ def set_node_color_by_scores(node: tuple, key: str) -> str:
         return set_scalecolor(math.ceil(meta[key]*10)) if (meta and key in meta and meta[key] is not None) else 'black'
 
 
+def set_plain_node_color(node: tuple, dir_list: list) -> str:
+    name, meta = node
+    if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
+        return '#6959CD'
+    elif name in dir_list:
+        return '#6495ED'
+    else:
+        return 'grey'
+
+
 def set_node_marker_size(node: tuple) -> int:
     '''
     regular size: 10
@@ -74,6 +84,137 @@ def set_node_line_width(node: tuple) -> int:
     '''
     name, meta = node
     return 3 if is_valid_key(meta, 'deprecated') and meta['deprecated'] else 1
+
+
+def plain_plotly_graph_to_html(G: nx.Graph, pname: str, pos: dict, title: str = '', outfile: str = 'plain_temp.html'):
+    rt_sub_G = nx.DiGraph()
+    # DEVELOPMENT
+    dev_sub_G = nx.DiGraph()
+    for u,v,m in G.edges(data=True):
+        if 'runtime' in m and m['runtime'] is True:
+            rt_sub_G.add_node(u, **G.nodes()[u])
+            rt_sub_G.add_node(v, **G.nodes()[v])
+            rt_sub_G.add_edge(u,v, **m)
+        if 'development' in m and m['development'] is True:
+            dev_sub_G.add_node(u, **G.nodes()[u])
+            dev_sub_G.add_node(v, **G.nodes()[v])
+            dev_sub_G.add_edge(u,v, **m)
+    
+    Xv_gh_rt=[pos[n][0] for n in list(rt_sub_G.nodes())]
+    Yv_gh_rt=[pos[n][1] for n in list(rt_sub_G.nodes())]
+    Xv_gh_dev=[pos[n][0] for n in list(dev_sub_G.nodes())]
+    Yv_gh_dev=[pos[n][1] for n in list(dev_sub_G.nodes())]
+
+    # edges
+    Xed_github_rt=[] # RUNTIME
+    Yed_github_rt=[]
+    Xed_github_dev=[] # DEVELOPMENT
+    Yed_github_dev=[]
+
+    # GITHUB RUNTIME
+    for u, v, m in list(rt_sub_G.edges(data=True)):
+        Xed_github_rt+=[pos[u][0],pos[v][0]]
+        Yed_github_rt+=[pos[u][1],pos[v][1]]
+        
+    # GITHUB DEVELOPMENT
+    for u, v, m in list(dev_sub_G.edges(data=True)):
+        Xed_github_dev+=[pos[u][0],pos[v][0]]
+        Yed_github_dev+=[pos[u][1],pos[v][1]]
+
+    # vertice node color based on dependency type (filling)
+    dir_list = list(G.neighbors(pname))
+    v_scores_gh_rt=[set_plain_node_color(n, dir_list) for n in list(rt_sub_G.nodes(data=True))]
+    v_scores_gh_dev=[set_plain_node_color(n, dir_list) for n in list(dev_sub_G.nodes(data=True))]
+
+    # edge traces
+    data=[]
+    for i in range(0, len(Xed_github_rt)-2, 2):
+        data+=[go.Scatter(
+                x=Xed_github_rt[i:i+2],
+                y=Yed_github_rt[i:i+2],
+                mode='lines',
+                legendgroup="gh_rt",
+                showlegend=False,
+                line=dict(color='lightgrey', width=0.8)
+        )]
+
+    if len(Xed_github_rt) > 0:
+        data+=[go.Scatter(
+                x=Xed_github_rt[len(Xed_github_rt)-2:],
+                y=Yed_github_rt[len(Yed_github_rt)-2:],
+                mode='lines',
+                legendgroup="gh_rt",
+                name="runtime dependency relationships",
+                line=dict(color='lightgrey', width=0.8)
+        )]
+    for i in range(0, len(Xed_github_dev)-2, 2):
+        data+=[go.Scatter(
+            x=Xed_github_dev[i:i+2],
+            y=Yed_github_dev[i:i+2],
+            mode='lines',
+            legendgroup="gh_dev",
+            showlegend=False,
+            line=dict(color='lightgrey', width=3.2)
+        )]
+        
+    if len(Xed_github_dev) > 0:
+        data+=[go.Scatter(
+                x=Xed_github_dev[len(Xed_github_dev)-2:],
+                y=Yed_github_dev[len(Yed_github_dev)-2:],
+                mode='lines',
+                legendgroup="gh_dev",
+                name="development dependency relationships",
+                line=dict(color='lightgrey', width=3.2)
+        )]
+
+    # node traces
+    if len(Xv_gh_rt) > 0:
+        data+=[go.Scatter(x=Xv_gh_rt,
+               y=Yv_gh_rt,
+               mode='markers',
+               legendgroup="gh_rt",               
+               name='runtime dependencies',
+               marker=dict(symbol='circle',
+                             size=10,
+                             opacity=1,
+                             color=v_scores_gh_rt,
+                             line=dict(color='black', width=1),
+                             ),
+               )]
+    if len(Xv_gh_dev) > 0:
+        data+=[go.Scatter(x=Xv_gh_dev,
+               y=Yv_gh_dev,
+               mode='markers',
+               legendgroup="gh_dev",               
+               name='development dependencies (red outline means deprecation)',
+               marker=dict(symbol='circle',
+                             size=10,
+                             opacity=1,
+                             color=v_scores_gh_dev,
+                             line=dict(color='black', width=1),
+                             ),
+               )]
+    fig=go.Figure(data=data)
+    
+    fig.update_layout(
+        title=title,
+        title_x=0.5,
+        legend=dict(orientation="h", 
+                    font=dict(size=12)),
+        xaxis=go.layout.XAxis(showticklabels=False),
+        yaxis=go.layout.YAxis(showticklabels=False),
+        paper_bgcolor='white',
+        plot_bgcolor='white'
+    )
+
+    x_pos_list = [v[0] for v in pos.values()]
+    y_pos_list = [v[1] for v in pos.values()]
+    xoffset = (max(x_pos_list) - min(x_pos_list)) * 0.05
+    yoffset = (max(y_pos_list) - min(y_pos_list)) * 0.05
+    fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
+    fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
+    
+    return fig.write_html(outfile)
 
 
 def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'final', outfile: str = 'temp.html'):
@@ -128,9 +269,6 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     # edge color lists
     ed_color_github_rt=[]
     ed_color_github_dev=[]
-
-    tmp_gh_rt_nodes=[]
-    tmp_gh_dev_nodes=[]
     
     # GITHUB RUNTIME
     for u, v, m in list(rt_sub_G.edges(data=True)):

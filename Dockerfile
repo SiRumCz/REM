@@ -13,6 +13,7 @@ COPY rem_graph_analysis.py /rem_graph_analysis.py
 COPY rem_graphics.py /rem_graphics.py
 COPY rem_graph_run_single.py /rem_graph_run_single.py
 COPY rem_graph_run_all.py /rem_graph_run_all.py
+COPY plain_graph_run.py /plain_graph_run.py
 
 # output folder
 RUN mkdir /htmls
