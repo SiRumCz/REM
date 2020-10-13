@@ -203,6 +203,7 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
         # using dot diagram which shows the hierarchy of the graph
         pos = nx.nx_pydot.graphviz_layout(project_sub_G, prog='dot', root=pname)
         # pos = nx.nx_agraph.graphviz_layout(project_sub_G,prog="twopi", root=pname)
+        filtered_project_sub_G = nx.DiGraph()
         if filter_flag:
             print('\nbefore filter: {:,} nodes, {:,} edges'
                     .format(project_sub_G.number_of_nodes(), project_sub_G.number_of_edges()))
