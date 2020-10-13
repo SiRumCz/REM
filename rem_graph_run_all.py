@@ -11,6 +11,7 @@ import sys # exit, argv
 import os # path.join, isfile
 from rem_graph_analysis import project_graph_analysis
 from utils import *
+from configs import NPMJSON
 
 
 def main():
@@ -36,38 +37,12 @@ def main():
     # if input url has specified branch, otherwise will be master
     if 'tree' in url_tokens:
         owner, repo, tree, branch = url_tokens[-4:]
+        del tree
     else:
         owner, repo, branch = url_tokens[-2:]+['master']
-
-    # establish database connection
-    conn = sqlite3.connect(dbfile)
-    c = conn.cursor()
     
-    # npm metadata list
-    npm_meta_query = ''' 
-        SELECT n.name, n.latest, n.deprecated, 
-        s.final, s.popularity, s.quality, s.maintenance
-        FROM packages AS n
-        LEFT JOIN scores AS s
-        USING (name); 
-    '''
-    print('fetching NPM metadata..', end='')
-    c.execute(npm_meta_query)
-    npm_with_deprecated_list = c.fetchall()
-    print('done. [{:,}]'.format(len(npm_with_deprecated_list)))
-
-    # npm dependency relationships list
-    npm_dep_query = ''' SELECT * FROM depend; '''
-    print('fetching NPM dependency relationships..', end='')
-    c.execute(npm_dep_query)
-    npm_dep_list = c.fetchall()
-    print('done. [{:,}]'.format(len(npm_dep_list)))
-
-    # create di-graph to store npm package network
-    print('creating NPM dependency graph..', end='')
-    npm_G = create_graph(npm_with_deprecated_list, npm_dep_list)
-    print('done. [{:,}] nodes, [{:,}] edges'
-    .format(npm_G.number_of_nodes(), npm_G.number_of_edges()))
+    prepare_npm_graph(reload_flag=False)
+    npm_G = read_graph_json(NPMJSON)
 
     # fetch github application package.json
     # runtime and development dependencies
@@ -108,7 +83,6 @@ def main():
       project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=True)
     print('exported REM dependency graphs to {}.'.format(out_folder))
 
-    conn.close()
     return
 
 
