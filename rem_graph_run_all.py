@@ -22,12 +22,6 @@ def main():
     else:
         sys.exit('Usage: python3 rem_graph_run_all.py <github_url> [<out_folder>(htmls/)]')
 
-    dbfile = os.path.join('data', 'dep_network_npm_search.db') # sqlite3 dependency network database
-
-    # check if file exists
-    if not os.path.isfile(dbfile):
-        sys.exit('dependency database not found, please run preprocess fisrt')
-    
     # parse github repo and split into owner, repo, and branch 
     repo_url = sys.argv[1]
     # naive check if input is github address
@@ -41,7 +35,7 @@ def main():
     else:
         owner, repo, branch = url_tokens[-2:]+['master']
     
-    prepare_npm_graph(reload_flag=False)
+    prepare_npm_graph()
     npm_G = read_graph_json(NPMJSON)
 
     # fetch github application package.json
@@ -79,8 +73,8 @@ def main():
 
     # export dependency graph to HTML file
     for keyword in ['final', 'popularity', 'quality', 'maintenance']:
-      outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
-      project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=True)
+        outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
+        project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=True)
     print('exported REM dependency graphs to {}.'.format(out_folder))
 
     return
