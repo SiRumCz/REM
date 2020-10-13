@@ -5,7 +5,14 @@ Zhe Chen (zkchen@uvic.ca)
 '''
 
 import networkx as nx
+from networkx.classes import graph
 import requests # get
+import json
+import sqlite3
+import sys
+from os.path import join, isfile
+from configs import NPMDB, NPMJSON
+from networkx.readwrite import json_graph
 
 
 def is_valid_key(data: dict, key: str) -> bool:
@@ -61,3 +68,60 @@ def create_graph(node_list: list, dep_rel_list: list) -> nx.DiGraph:
         name, ver, dep_name, dep_cons = deps
         npm_G.add_edge(name, dep_name, dep_constraint=dep_cons)
     return npm_G
+
+
+def prepare_npm_graph(reload_flag: bool = False):
+    # skip if reload is false and json file exists
+    if (reload_flag is False) and isfile(NPMJSON):
+        print(f'use {NPMJSON}')
+        return
+    
+    # check if file exists
+    if not isfile(NPMDB):
+        sys.exit('NPM dependency database not found, please run preprocess.py fisrt')
+    
+    # establish database connection
+    conn = sqlite3.connect(NPMDB)
+    c = conn.cursor()
+    
+    # npm metadata list
+    npm_meta_query = ''' 
+        SELECT n.name, n.latest, n.deprecated, 
+        s.final, s.popularity, s.quality, s.maintenance
+        FROM packages AS n
+        LEFT JOIN scores AS s
+        USING (name); 
+    '''
+    print('fetching NPM metadata..', end='')
+    c.execute(npm_meta_query)
+    npm_with_deprecated_list = c.fetchall()
+    print('done. [{:,}]'.format(len(npm_with_deprecated_list)))
+
+    # npm dependency relationships list
+    npm_dep_query = ''' SELECT * FROM depend; '''
+    print('fetching NPM dependency relationships..', end='')
+    c.execute(npm_dep_query)
+    npm_dep_list = c.fetchall()
+    print('done. [{:,}]'.format(len(npm_dep_list)))
+
+    # create di-graph to store npm package network
+    print('creating NPM dependency graph..', end='')
+    npm_G = create_graph(npm_with_deprecated_list, npm_dep_list)
+    print('done. [{:,}] nodes, [{:,}] edges'
+    .format(npm_G.number_of_nodes(), npm_G.number_of_edges()))
+    dump_graph_json(npm_G, NPMJSON)
+    conn.close()
+
+
+def read_graph_json(filepath) -> nx.Graph:
+    with open(filepath) as json_file:
+        data = json.load(json_file)
+    print(f'read from {filepath}')
+    return json_graph.node_link_graph(data, directed=True)
+
+
+def dump_graph_json(G, filepath: str = 'temp.json'):
+    data = json_graph.node_link_data(G)
+    with open(filepath, 'w') as dfile:
+        json.dump(data, dfile)
+    print(f'json file dumped at {filepath}')
