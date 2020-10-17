@@ -392,6 +392,8 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
     fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
     
+    print(f'exporting REM dependency graph to {outfile}.')
+
     return fig.write_html(outfile)
 
 
