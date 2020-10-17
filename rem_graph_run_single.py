@@ -76,9 +76,8 @@ def main():
 
     # export dependency graph to HTML file
     # draw_plain_dependency_graph(G=application_sub_G, pname=application_name, outfile=os.path.join(out_folder, f'{application_name}_plain_graph.html'))
-    outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
-    project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=FILTER_ENABLE)
-    print('exported REM dependency graph to {}.'.format(out_folder))
+    outfile = f'{owner}-{repo}-{branch}_{keyword}'
+    project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, outfolder=out_folder, keyword=keyword, filter_flag=FILTER_ENABLE)
 
 
 if __name__ == '__main__':

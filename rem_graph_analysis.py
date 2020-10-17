@@ -5,14 +5,16 @@ Ripple Effect of Metrics (REM) graph with metrics of health
 Zhe Chen (zkchen@uvic.ca)
 '''
 
-from rem_filter import *
-from rem_graphics import *
 import networkx as nx # DiGraph
 import sys
 import json # dump()
+from configs import JSONMODE
+from rem_filter import *
+from rem_graphics import *
+from utils import *
 
 
-def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, filter_flag: bool):
+def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, outfolder: str, keyword: str, filter_flag: bool):
     print('NPM software:', pname)
 
     ''' pre. check if exists '''
@@ -186,8 +188,18 @@ def project_graph_analysis(G: nx.Graph, pname: str, outfile: str, keyword: str, 
     
     ''' 4. node link diagram of the dependency graph '''
     assign_graph_node_symbol(project_sub_G, filtered_project_sub_G)
+    
     if filter_flag:
-        plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
-                title='filtered REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'_min.html')
-    plotly_graph_to_html(G=project_sub_G, pos=pos, 
-                    title='full REM dependency graph for {}'.format(pname), key=keyword, outfile=outfile+'_full.html')
+        if JSONMODE:
+            dump_graph_json(G=filtered_project_sub_G, filepath=join('d3_test', outfile+'_filtered.json'))
+        else:
+            plotly_graph_to_html(G=filtered_project_sub_G, pos=pos, 
+                title='filtered REM dependency graph for {}'.format(pname), key=keyword, outfile=join(outfolder, outfile+'_min.html'))
+            
+    if JSONMODE:
+        dump_graph_json(G=filtered_project_sub_G, filepath=join('d3_test', outfile+'_full.json'))
+        with open(join('d3_test', outfile+'_pos.json'), 'w') as dfile:
+            json.dump(pos, dfile)
+    else:            
+        plotly_graph_to_html(G=project_sub_G, pos=pos, 
+            title='full REM dependency graph for {}'.format(pname), key=keyword, outfile=join(outfolder,outfile+'_full.html'))

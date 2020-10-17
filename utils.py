@@ -124,4 +124,4 @@ def dump_graph_json(G, filepath: str = 'temp.json'):
     data = json_graph.node_link_data(G)
     with open(filepath, 'w') as dfile:
         json.dump(data, dfile)
-    print(f'json file dumped at {filepath}')
+    print(f'json file stored at {filepath}')

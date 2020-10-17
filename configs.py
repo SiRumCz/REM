@@ -7,5 +7,5 @@ else:
   NPMDB='data/dep_network_npm_search.db'
   NPMJSON='data/npm_graph.json'
 NPMGRAPH_LOAD=False
-JSONMODE=True
+JSONMODE=False
 FILTER_ENABLE=True

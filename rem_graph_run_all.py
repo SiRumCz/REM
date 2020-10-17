@@ -73,11 +73,8 @@ def main():
 
     # export dependency graph to HTML file
     for keyword in ['final', 'popularity', 'quality', 'maintenance']:
-        outfile = os.path.join(out_folder, '{}-{}-{}_{}'.format(owner, repo, branch, keyword))
-        project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, keyword=keyword, filter_flag=True)
-    print('exported REM dependency graphs to {}.'.format(out_folder))
-
-    return
+        outfile = f'{owner}-{repo}-{branch}_{keyword}'
+        project_graph_analysis(G=application_sub_G, pname=application_name, outfile=outfile, outfolder=out_folder, keyword=keyword, filter_flag=True)
 
 
 if __name__ == '__main__':
