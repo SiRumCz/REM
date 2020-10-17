@@ -8,6 +8,7 @@ COPY requirements.txt /requirements.txt
 COPY preprocess.py /preprocess.py
 # REM generator scripts
 COPY utils.py /utils.py
+COPY configs.py /configs.py
 COPY rem_filter.py /rem_filter.py
 COPY rem_graph_analysis.py /rem_graph_analysis.py
 COPY rem_graphics.py /rem_graphics.py

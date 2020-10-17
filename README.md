@@ -6,7 +6,7 @@ by Zhe Chen (zkchen@uvic.ca) and Daniel M. German (dmg@uvic.ca)
 The Ripple Effect of Metrics (REM) graph is a dependency graph designed to help developers identify vulnerable dependencies with lower metric-rating transitive dependencies in their dependency chains.
 
 sample:
-![sample_rem](imgs/app_example_brackets_maintenance.png)
+![sample_rem](imgs/example.png)
 
 demo: http://turingmachine.org/rem_demo/
 
@@ -27,7 +27,7 @@ However, if you wish to collect the latest data, run `python3 preprocess.py` to 
 2. REM depends on GraphViz. To install it, go to https://graphviz.gitlab.io/download/ and look for right version for your OS.
 3. Run `mkdir htmls` to create the folder that stores REM graphs.
 4. `rem_graph_run_all.py` allows user to have all 8 REM graphs for four metrics of health (popularity, quality, maintenance, final) with and without Filtering. To run it, run `python3 rem_graph_run_all.py <github_url> [<out_folder>(htmls/)]` where `github_url` is the url to NPM application github repo, and optinal `out_folder` which is the output folder to store REM graphs, default is `htmls\`. For example, to generate every REM graph for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_all.py https://github.com/adobe/brackets`.
-5. `rem_graph_run_single.py` allows user to generate REM graph on which metric of health and whether to use Filtering. To run it, run `python3 rem_graph_run_single.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]` where `keyword` is one of the metrics of health (popularity, quality, maintenance, final), `filter=True|False` will toggle the graph filtering. For example, to generate a filtered REM graph with quality metric for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_single.py quality filter=True https://github.com/adobe/brackets`.
+5. `rem_graph_run_single.py` allows user to generate REM graph on which metric of health and whether to use Filtering. To run it, run `python3 rem_graph_run_single.py <keyword> <github_url> [<out_folder>(htmls/)]` where `keyword` is one of the metrics of health (popularity, quality, maintenance, final). To toggle the graph filtering, go to `configs.py`, change `FILTER_ENABLE` to either `True` or `False`. For example, to generate a filtered REM graph with quality metric for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_single.py quality https://github.com/adobe/brackets`.
 6. To view the REM graph generated, open it using a web browser (we recommend Chrome).
 
 #### Run on local machine with Docker
@@ -40,7 +40,7 @@ The Dockerfile includes every environment for REM graph rendering.
 3. once the build is finished, run `docker run -it --name <name> <image id>` to bring the user to the CLI of the running Docker container for REM. `name` is the name of the image which user can reuse later by running `docker start -i <name>` and `image id` is the last unique string generated from step 2.
 4. generate REM graphs:
     - `rem_graph_run_all.py` allows user to have all 8 REM graphs for four metrics of health (popularity, quality, maintenance, final) with and without Filtering. To run it, run `python3 rem_graph_run_all.py <github_url> [<out_folder>(htmls/)]` where `github_url` is the url to NPM application github repo, and optinal `out_folder` which is the output folder to store REM graphs, default is `htmls\`. For example, to generate every REM graph for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_all.py https://github.com/adobe/brackets`.
-    - `rem_graph_run_single.py` allows user to generate REM graph on which metric of health and whether to use Filtering. To run it, run `python3 rem_graph_run_single.py <keyword> filter=True|False <github_url> [<out_folder>(htmls/)]` where `keyword` is one of the metrics of health (popularity, quality, maintenance, final), `filter=True|False` will toggle the graph filtering. For example, to generate a filtered REM graph with quality metric for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_single.py quality filter=True https://github.com/adobe/brackets`.
+    - `rem_graph_run_single.py` allows user to generate REM graph on which metric of health and whether to use Filtering. To run it, run `python3 rem_graph_run_single.py <keyword> <github_url> [<out_folder>(htmls/)]` where `keyword` is one of the metrics of health (popularity, quality, maintenance, final). To toggle the graph filtering, go to `configs.py`, change `FILTER_ENABLE` to either `True` or `False`. For example, to generate a filtered REM graph with quality metric for [adobe/brackets](https://github.com/adobe/brackets), run `python3 rem_graph_run_single.py quality https://github.com/adobe/brackets`.
 5. REM graphs will be created in `/htmls` folder inside Docker container
 6. to export file from Docker container to local machine, keep the container running and run `docker cp <container id>:/htmls <target_dir>` from host. `container id` can be found by `docker ps`.
 
