@@ -11,6 +11,7 @@ import sqlite3 # connection
 import json # dump
 import requests
 from utils import is_valid_key
+from configs import NPMDB, NPMRAW
 
 
 def beautify_json(data:dict) -> str:
@@ -343,13 +344,10 @@ def update_scores_table_from_npmsio(conn: sqlite3.Connection) -> int:
     return num_valid
 
 
-def main():
-    if len(sys.argv) < 3:
-        sys.exit("Usage: python3 preprocess.py <doc_file> <out_db_file>")
-    
-    raw_npm_doc = sys.argv[1] # raw npm data
-    out_db = sys.argv[2] # ouput database
-    dnconn = sqlite3.connect(out_db) # 'dep_network.db'
+def run_preprocess(doc_file=NPMRAW, out_db=NPMDB):
+    raw_npm_doc =doc_file # raw npm data
+    out_db = NPMDB # ouput database e.g. 'dep_network.db'
+    dnconn = sqlite3.connect(out_db)
 
     # create tables: packages, depend, scores
     create_tables(dnconn)
@@ -369,4 +367,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    run_preprocess()
