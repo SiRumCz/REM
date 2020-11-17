@@ -8,7 +8,7 @@ import networkx as nx # DiGraph, descendants, all_simple_paths, set_node_attribu
 import os # path.join, isfile
 import json
 
-from configs import NPMJSON, FILTER_ENABLE, REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_HOST
+from configs import REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_DEPENDABOT_HTML_URL, REM_DEPENDABOT_IMG_URL
 from utils import *
 from rem_filter import *
 from rem_graphics import *
@@ -120,15 +120,18 @@ def create(packages, depfile) -> tuple:
     # assign node symbol
     assign_graph_node_symbol(application_sub_G, filtered_application_sub_G)
 
-    outfile = f'{application_name}_{keyword}'
-    html_out_path = join(REM_DEPENDABOT_HTML_OUTDIR, outfile+'_min.html')
-    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, outfile+'_min.png')
+    html_outfile = f'{application_name}_{keyword}_min.html'
+    img_outfile = f'{application_name}_{keyword}_min.png'
+    html_out_path = join(REM_DEPENDABOT_HTML_OUTDIR, html_outfile)
+    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile)
+    html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
+    img_out_link = join(REM_DEPENDABOT_IMG_URL, img_outfile)
 
     plotly_graph_to_html(G=filtered_application_sub_G, pos=pos, 
                 title=f'filtered Ripple-Effect of Metrics(REM) dependency graph for {application_name}', 
                 key=keyword, outfile=html_out_path, out_img=img_out_path, re_metric='ripple')
     
-    return (join(REM_HOST, img_out_path), join(REM_HOST, html_out_path))
+    return (img_out_link, html_out_link)
             
 
 

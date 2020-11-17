@@ -29,8 +29,8 @@ def rem_highlight():
     """
     packages = request.form.getlist('packages')
     depfile = request.form['depfile']
-    resp = create(packages=packages, depfile=depfile)
-    return jsonify({'pr_link': resp[0], 'live_link': resp[1]})
+    pr_link, live_link = create(packages=packages, depfile=depfile)
+    return jsonify({'pr_link': pr_link, 'live_link':live_link})
 
 
 if __name__ == '__main__':
