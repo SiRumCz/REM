@@ -158,14 +158,14 @@ def filter_pre_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str)
     return G.subgraph(list(temp_G.subgraph(list(nx.descendants(temp_G, root))+[root]).nodes())).copy()
 
 
-def gray_out_non_problematics(G: nx.Graph, root: str, keyword: str):
+def gray_out_non_problematics(G: nx.Graph, root: str, keyword: str, re_metric: str = 'deprecated'):
     '''
     in a filtered REM, non-problematic nodes will be grayed-out to emphasize problematic transitive
     dependencies
     '''
     dir_dependencies = list(G.neighbors(root))
     for node in G.nodes():
-        if is_valid_key(G.nodes()[node], 'deprecated') and G.nodes()[node]['deprecated'] == True:
+        if is_valid_key(G.nodes()[node], re_metric) and G.nodes()[node][re_metric] == True:
             continue
         if (node in dir_dependencies+[root]):
             continue

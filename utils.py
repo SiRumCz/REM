@@ -11,7 +11,7 @@ import json
 import sqlite3
 import sys
 from os.path import join, isfile
-from configs import NPMDB, NPMJSON, NPMGRAPH_LOAD
+from configs import NPMDB, NPMJSON, NPMGRAPH_RELOAD
 from networkx.readwrite import json_graph
 
 
@@ -72,7 +72,7 @@ def create_graph(node_list: list, dep_rel_list: list) -> nx.DiGraph:
 
 def prepare_npm_graph():
     # skip if reload is false and json file exists
-    if isfile(NPMJSON) and NPMGRAPH_LOAD is False:
+    if isfile(NPMJSON) and NPMGRAPH_RELOAD is False:
         print(f'npm graph json file [{NPMJSON}] exists and reload is disabled')
         return
     

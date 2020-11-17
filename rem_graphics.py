@@ -3,16 +3,19 @@ Plotly graph rendering supports
 
 Zhe Chen (zkchen@uvic.ca)
 '''
-
+from kaleido.scopes.plotly import PlotlyScope
 from utils import is_valid_key
 import plotly.graph_objects as go # create figure
 import plotly.express as px # colorscale
 import math # ceil
 import networkx as nx
 
+scope = PlotlyScope()
 
-def dict_to_text(node: tuple, key: str) -> str:
-    out_list = ['final', 'quality', 'popularity', 'maintenance', 'type', 'version', 'deprecated']
+
+def dict_to_text(node: tuple, key: str, re_metric: str) -> str:
+    re_metric = 'deprecated' if not re_metric else re_metric
+    out_list = ['final', 'quality', 'popularity', 'maintenance', 'type', 'version', re_metric]
     name, d = node
     s = '<b>'+name+'</b>'
     for k,v in sorted(d.items()):
@@ -28,12 +31,13 @@ def set_scalecolor(val) -> str:
     return scale[val]
 
 
-def set_node_color(node: tuple, key: str) -> str:
+def set_node_color(node: tuple, key: str, re_metric: str) -> str:
     '''
     #6959CD - software
     green   - active     :)
     red     - deprecared :(
     '''
+    re_metric = 'deprecated' if not re_metric else re_metric
     name, meta = node
     if is_valid_key(data=meta, key='type') and meta['type'] == 'GITHUB':
         return '#6959CD'
@@ -41,7 +45,7 @@ def set_node_color(node: tuple, key: str) -> str:
         # return set_scalecolor(math.ceil(meta[key]*10)) if (meta and key in meta and meta[key] is not None) else 'black'
         return set_scalecolor(math.ceil(meta[key]*10)) # node with None metric will be marked problematic and should not enter here
     else:
-        return 'red' if is_valid_key(data=meta, key='deprecated') and meta['deprecated'] else 'green'
+        return 'red' if is_valid_key(data=meta, key=re_metric) and meta[re_metric] else 'green'
 
 
 def set_node_color_by_scores(node: tuple, key: str) -> str:
@@ -68,22 +72,24 @@ def set_plain_node_color(node: tuple, dir_list: list) -> str:
         return 'grey'
 
 
-def set_node_marker_size(node: tuple) -> int:
+def set_node_marker_size(node: tuple, re_metric: str) -> int:
     '''
     regular size: 10
     deprecated size: 15
     '''
+    re_metric = 'deprecated' if not re_metric else re_metric
     name, meta = node
-    return 15 if is_valid_key(meta, 'deprecated') and meta['deprecated'] else 10
+    return 15 if is_valid_key(meta, re_metric) and meta[re_metric] else 10
 
 
-def set_node_line_width(node: tuple) -> int:
+def set_node_line_width(node: tuple, re_metric: str) -> int:
     '''
     regular size: 1
     deprecated size: 3
     '''
+    re_metric = 'deprecated' if not re_metric else re_metric
     name, meta = node
-    return 3 if is_valid_key(meta, 'deprecated') and meta['deprecated'] else 1
+    return 3 if is_valid_key(meta, re_metric) and meta[re_metric] else 1
 
 
 def plain_plotly_graph_to_html(G: nx.Graph, pname: str, pos: dict, title: str = '', outfile: str = 'plain_temp.html'):
@@ -217,7 +223,12 @@ def plain_plotly_graph_to_html(G: nx.Graph, pname: str, pos: dict, title: str = 
     return fig.write_html(outfile)
 
 
-def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'final', outfile: str = 'temp.html'):
+def plotly_save_to_local_img(fig, path):
+    with open(path, "wb") as f:
+        f.write(scope.transform(fig, format="png", width=1500, height=750, scale=0.7))
+
+
+def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'final', outfile: str = 'temp.html', out_img: str = None, re_metric: str = None):
     ''' 
     G         : networkx graph
     pos       : positions of graph node
@@ -246,20 +257,20 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     Xv_gh_dev=[pos[n][0] for n in list(dev_sub_G.nodes())]
     Yv_gh_dev=[pos[n][1] for n in list(dev_sub_G.nodes())]
     # vertice color lists (line)
-    v_color_gh_rt=[set_node_color(n, key) for n in list(rt_sub_G.nodes(data=True))]
-    v_color_gh_dev=[set_node_color(n, key) for n in list(dev_sub_G.nodes(data=True))]
+    v_color_gh_rt=[set_node_color(n, key, re_metric) for n in list(rt_sub_G.nodes(data=True))]
+    v_color_gh_dev=[set_node_color(n, key, re_metric) for n in list(dev_sub_G.nodes(data=True))]
     # vertice node color based on scores system (fill)
     v_scores_gh_rt=[set_node_color_by_scores(n, key) for n in list(rt_sub_G.nodes(data=True))]
     v_scores_gh_dev=[set_node_color_by_scores(n, key) for n in list(dev_sub_G.nodes(data=True))]
     # vertice size
-    v_size_gh_rt=[set_node_marker_size(n) for n in list(rt_sub_G.nodes(data=True))]
-    v_size_gh_dev=[set_node_marker_size(n) for n in list(dev_sub_G.nodes(data=True))]
+    v_size_gh_rt=[set_node_marker_size(n, re_metric) for n in list(rt_sub_G.nodes(data=True))]
+    v_size_gh_dev=[set_node_marker_size(n, re_metric) for n in list(dev_sub_G.nodes(data=True))]
     # vertice line width
-    v_width_gh_rt=[set_node_line_width(n) for n in list(rt_sub_G.nodes(data=True))]
-    v_width_gh_dev=[set_node_line_width(n) for n in list(dev_sub_G.nodes(data=True))]
+    v_width_gh_rt=[set_node_line_width(n, re_metric) for n in list(rt_sub_G.nodes(data=True))]
+    v_width_gh_dev=[set_node_line_width(n, re_metric) for n in list(dev_sub_G.nodes(data=True))]
     # vertice text lists
-    v_text_gh_rt=[dict_to_text(n, key) for n in list(rt_sub_G.nodes(data=True))]
-    v_text_gh_dev=[dict_to_text(n, key) for n in list(dev_sub_G.nodes(data=True))]
+    v_text_gh_rt=[dict_to_text(n, key, re_metric) for n in list(rt_sub_G.nodes(data=True))]
+    v_text_gh_dev=[dict_to_text(n, key, re_metric) for n in list(dev_sub_G.nodes(data=True))]
     
     # edges
     Xed_github_rt=[] # RUNTIME
@@ -392,8 +403,10 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
     fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
     fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
     
+    if out_img:
+        print(f'exporting REM dependency graph to {out_img}.')
+        plotly_save_to_local_img(fig, out_img)
     print(f'exporting REM dependency graph to {outfile}.')
-
     return fig.write_html(outfile)
 
 

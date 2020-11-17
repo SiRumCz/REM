@@ -3,4 +3,7 @@ requests
 pandas
 graphviz
 plotly
+kaleido
 pydot
+flask
+flask-cors
