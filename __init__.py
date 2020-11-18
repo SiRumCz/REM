@@ -1,15 +1,12 @@
 from flask import Flask, jsonify, request
-from flask import g as flask_globals
-from flask_cors import CORS
 
 from preprocess import run_preprocess
 from rem_graph_dependabot import create
 
 app = Flask(__name__)
-CORS(app)
 
 
-@app.route("/")
+@app.route('/')
 def index():
     return "Hello, welcome to Ripple-Effect of Metrics (github.com/SiRumCz/REM)."
 

@@ -38,6 +38,8 @@ def prepare_ripple_effect_highlights(application_name, G, packages) -> tuple:
     ripple_effect_edges = set()
 
     for p in packages:
+        if not G.has_node(p):
+            continue
         G.nodes()[p]['ripple'] = True
         for path in list(nx.all_simple_paths(G, source=application_name, target=p)):
             for i in range(len(path)-1):
