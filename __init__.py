@@ -9,7 +9,12 @@ app = Flask(__name__)
 CORS(app)
 
 
-@app.route('update-npm-database', methods = ['GET'])
+@app.route("/")
+def index():
+    return "Hello, welcome to Ripple-Effect of Metrics (github.com/SiRumCz/REM)."
+
+
+@app.route('/update-npm-database', methods = ['GET'])
 def update_npm_database():
     """
     UNSAFE - NOT TESTED

@@ -5,14 +5,14 @@ if platform == 'win32':
   NPMDB='data\\dep_network_npm_search.db' # sqlite3 NPM dependency database
   NPMJSON='data\\npm_graph.json'
 else:
-  NPMRAW='' 
-  NPMDB='data/dep_network_npm_search.db'
-  NPMJSON='data/npm_graph.json'
+  NPMRAW=''
+  NPMDB='/var/www/FlaskApp/REM/data/dep_network_npm_search.db'
+  NPMJSON='/var/www/FlaskApp/REM/data/npm_graph.json'
 NPMGRAPH_RELOAD=False
 JSONMODE=False
 FILTER_ENABLE=True
 # rem settings for security advisory dependabot
-REM_DEPENDABOT_HTML_URL='http://142.104.68.87/~zkchen/dependabot-rem/live'
-REM_DEPENDABOT_IMG_URL='http://142.104.68.87/~zkchen/dependabot-rem/img'
-REM_DEPENDABOT_HTML_OUTDIR='../public_html/dependabot-rem/live'
-REM_DEPENDABOT_IMG_OUTDIR='../public_html/dependabot-rem/img'
+REM_DEPENDABOT_HTML_URL='helium.cs.uvic.ca/rem/live-view'
+REM_DEPENDABOT_IMG_URL='helium.cs.uvic.ca/rem/images'
+REM_DEPENDABOT_HTML_OUTDIR='/var/www/FlaskApp/REM/live-view'
+REM_DEPENDABOT_IMG_OUTDIR='/var/www/FlaskApp/REM/images'
