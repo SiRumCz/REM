@@ -31,7 +31,7 @@ def prepare_filtered_graph(project_rt_sub_G, project_dev_sub_G, rt_ripple_effect
     return nx.compose(temp_rt_G, temp_dev_G).copy()
 
 
-def prepare_ripple_effect_highlights(application_name, G, packages) -> tuple:
+def prepare_ripple_effect_highlights(application_name, G, packages) -> set:
     nx.set_node_attributes(G, False, 'ripple')
     nx.set_edge_attributes(G, 'lightgrey', 'color')
 
@@ -49,7 +49,7 @@ def prepare_ripple_effect_highlights(application_name, G, packages) -> tuple:
     return ripple_effect_edges
 
 
-def prepare_sub_graphs(npm_G, rt_deps, dev_deps, application_name):
+def prepare_sub_graphs(npm_G, rt_deps, dev_deps, application_name) -> tuple:
     """
     create target application (ROOT-APPLICATION) sub-graphs
     """
