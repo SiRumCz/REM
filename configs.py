@@ -12,7 +12,7 @@ NPMGRAPH_RELOAD=False
 JSONMODE=False
 FILTER_ENABLE=True
 # rem settings for security advisory dependabot
-REM_DEPENDABOT_HTML_URL='helium.cs.uvic.ca/rem/live-view'
-REM_DEPENDABOT_IMG_URL='helium.cs.uvic.ca/rem/images'
+REM_DEPENDABOT_HTML_URL='http://helium.cs.uvic.ca/rem/live-view'
+REM_DEPENDABOT_IMG_URL='http://helium.cs.uvic.ca/rem/images'
 REM_DEPENDABOT_HTML_OUTDIR='/var/www/FlaskApp/REM/live-view'
 REM_DEPENDABOT_IMG_OUTDIR='/var/www/FlaskApp/REM/images'

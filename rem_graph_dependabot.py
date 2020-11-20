@@ -7,6 +7,7 @@ Zhe Chen (zkchen@uvic.ca)
 import networkx as nx # DiGraph, descendants, all_simple_paths, set_node_attributes, set_edge_attributes
 import os # path.join, isfile
 import json
+import uuid # uuid1
 
 from configs import REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_DEPENDABOT_HTML_URL, REM_DEPENDABOT_IMG_URL
 from utils import *
@@ -122,8 +123,9 @@ def create(packages, depfile) -> tuple:
     # assign node symbol
     assign_graph_node_symbol(application_sub_G, filtered_application_sub_G)
 
-    html_outfile = f'{application_name}_{keyword}_min.html'
-    img_outfile = f'{application_name}_{keyword}_min.png'
+    uname = str(uuid.uuid1())
+    html_outfile = f'{uname}.html'
+    img_outfile = f'{uname}.png'
     html_out_path = join(REM_DEPENDABOT_HTML_OUTDIR, html_outfile)
     img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile)
     html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
