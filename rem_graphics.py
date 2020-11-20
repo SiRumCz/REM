@@ -311,7 +311,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                 y=Yed_github_rt[len(Yed_github_rt)-2:],
                 mode='lines',
                 legendgroup="gh_rt",
-                name="runtime dependency relationships (dark-red means is affected by package deprecation)",
+                name="runtime dependency relationships (dark-red means ripple-effect of problematic dependency)",
                 line=dict(color=ed_color_github_rt[len(ed_color_github_rt)-1], width=0.8)
         )]
     
@@ -331,7 +331,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                 y=Yed_github_dev[len(Yed_github_dev)-2:],
                 mode='lines',
                 legendgroup="gh_dev",
-                name="development dependency relationships (dark-red means is affected by library deprecation)",
+                name="development dependency relationships (dark-red means ripple-effect of problematic dependency)",
                 line=dict(color=ed_color_github_dev[len(ed_color_github_dev)-1], width=3.2)
         )]
     
@@ -341,7 +341,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                y=Yv_gh_rt,
                mode='markers',
                legendgroup="gh_rt",               
-               name='runtime dependencies (red outline means deprecation)',
+               name='runtime dependencies (red outline means rippling one)',
                marker=dict(symbol=[m['symbol'] for x,m in rt_sub_G.nodes(data=True)],
                              size=v_size_gh_rt,
                              opacity=1,
@@ -364,7 +364,7 @@ def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'fi
                y=Yv_gh_dev,
                mode='markers',
                legendgroup="gh_dev",               
-               name='development dependencies (red outline means deprecation)',
+               name='development dependencies (red outline means rippling one)',
                marker=dict(symbol=[m['symbol'] for x,m in dev_sub_G.nodes(data=True)],
                              size=v_size_gh_dev,
                              opacity=1,
