@@ -8,6 +8,7 @@ else:
   NPMRAW=''
   NPMDB='/var/www/FlaskApp/REM/data/dep_network_npm_search.db'
   NPMJSON='/var/www/FlaskApp/REM/data/npm_graph.json'
+NPMRAW_API='https://replicate.npmjs.com/_all_docs?include_docs=true'
 NPMGRAPH_RELOAD=False
 JSONMODE=False
 FILTER_ENABLE=True

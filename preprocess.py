@@ -11,7 +11,7 @@ import sqlite3 # connection
 import json # dump
 import requests
 from utils import is_valid_key
-from configs import NPMDB, NPMRAW
+from configs import NPMDB, NPMRAW, NPMRAW_API
 
 
 def beautify_json(data:dict) -> str:
@@ -76,6 +76,63 @@ def create_tables(conn: sqlite3.Connection):
     return conn.commit()
 
 
+def read_line_data(rawdata, package):
+    docdata = rawdata['doc'] # fetched doc data
+    # print(beautifyJson(docdata))
+    # package name
+    if is_valid_key(docdata, 'name'):
+        package['name'] = str(docdata['name'])
+    else:
+        package['name'] = str(rawdata['key'])
+    # latest in dist-tags
+    if is_valid_key(docdata, 'dist-tags') and is_valid_key(docdata['dist-tags'], 'latest'):
+        package['latest'] = str(docdata['dist-tags']['latest'])
+    # author and author email
+    if is_valid_key(docdata, 'author') and type(docdata['author']) is not str:
+        packageAuthor = docdata['author']
+        if is_valid_key(packageAuthor, 'name'):
+            package['author'] = str(packageAuthor['name'])
+        if is_valid_key(packageAuthor, 'email'):
+            package['authoremail'] = str(packageAuthor['email'])
+    elif is_valid_key(docdata, 'author') and type(docdata['author']) is str:
+        package['author'] = str(docdata['author'])
+    # maintainers: list of people who created this package
+    if is_valid_key(docdata, 'maintainers'):
+        package['maintainers'] = str(docdata['maintainers'])
+    # versions: only the dependency list of latest version
+    # Alternative: list of all published versions (requires larger space)
+    if is_valid_key(docdata, 'versions'):
+        versions = docdata['versions']
+        if is_valid_key(versions, package['latest']):
+            package_json = versions[package['latest']]
+        else:
+            # retrieve the last metadata from the versions
+            package_json = versions[list(versions.keys())[-1]]
+        if is_valid_key(package_json, 'dependencies'):
+            package['versions'] = json.dumps(package_json['dependencies'])
+    # repo type and url
+    if is_valid_key(docdata, 'repository') and type(docdata['repository']) is not str:
+        repo = docdata['repository']
+        if is_valid_key(repo, 'type'):
+            package['repotype'] = str(repo['type'])
+        if is_valid_key(repo, 'url'):
+            package['repourl'] = str(repo['url'])
+    elif is_valid_key(docdata, 'repository') and type(docdata['repository']) is str:
+        package['repourl'] = str(docdata['repository'])
+    # homepage
+    if is_valid_key(docdata, 'homepage'):
+        package['homepage'] = str(docdata['homepage'])
+    # license(s)
+    if is_valid_key(docdata, 'license'):
+        package['license'] = str(docdata['license'])
+    # deprecate state: 0: False, 1: True
+    if is_valid_key(docdata, 'versions'):
+        latestdata = docdata['versions'][list(docdata['versions'].keys())[-1]]
+        if is_valid_key(latestdata, 'deprecated'):
+            package['deprecated'] = 1
+            package['deprecatemessage'] = str(latestdata['deprecated'])
+
+
 def update_packages_table(doc_file: str, conn: sqlite3.Connection) -> int:
     '''
     packages table stores the metadata extracted from NPM replicate registry
@@ -121,60 +178,7 @@ def update_packages_table(doc_file: str, conn: sqlite3.Connection) -> int:
             rawdata = json.loads(line)
             print("updating NPM packages metadata [{}/{}]".format(index-1, total_num), end='\r')
             if is_valid_key(rawdata, 'doc'):
-                docdata = rawdata['doc'] # fetched doc data
-                # print(beautifyJson(docdata))
-                # package name
-                if is_valid_key(docdata, 'name'):
-                    package['name'] = str(docdata['name'])
-                else:
-                    package['name'] = str(rawdata['key'])
-                # latest in dist-tags
-                if is_valid_key(docdata, 'dist-tags') and is_valid_key(docdata['dist-tags'], 'latest'):
-                    package['latest'] = str(docdata['dist-tags']['latest'])
-                # author and author email
-                if is_valid_key(docdata, 'author') and type(docdata['author']) is not str:
-                    packageAuthor = docdata['author']
-                    if is_valid_key(packageAuthor, 'name'):
-                        package['author'] = str(packageAuthor['name'])
-                    if is_valid_key(packageAuthor, 'email'):
-                        package['authoremail'] = str(packageAuthor['email'])
-                elif is_valid_key(docdata, 'author') and type(docdata['author']) is str:
-                    package['author'] = str(docdata['author'])
-                # maintainers: list of people who created this package
-                if is_valid_key(docdata, 'maintainers'):
-                    package['maintainers'] = str(docdata['maintainers'])
-                # versions: only the dependency list of latest version
-                # Alternative: list of all published versions (requires larger space)
-                if is_valid_key(docdata, 'versions'):
-                    versions = docdata['versions']
-                    if is_valid_key(versions, package['latest']):
-                        package_json = versions[package['latest']]
-                    else:
-                        # retrieve the last metadata from the versions
-                        package_json = versions[list(versions.keys())[-1]]
-                    if is_valid_key(package_json, 'dependencies'):
-                        package['versions'] = json.dumps(package_json['dependencies'])
-                # repo type and url
-                if is_valid_key(docdata, 'repository') and type(docdata['repository']) is not str:
-                    repo = docdata['repository']
-                    if is_valid_key(repo, 'type'):
-                        package['repotype'] = str(repo['type'])
-                    if is_valid_key(repo, 'url'):
-                        package['repourl'] = str(repo['url'])
-                elif is_valid_key(docdata, 'repository') and type(docdata['repository']) is str:
-                    package['repourl'] = str(docdata['repository'])
-                # homepage
-                if is_valid_key(docdata, 'homepage'):
-                    package['homepage'] = str(docdata['homepage'])
-                # license(s)
-                if is_valid_key(docdata, 'license'):
-                    package['license'] = str(docdata['license'])
-                # deprecate state: 0: False, 1: True
-                if is_valid_key(docdata, 'versions'):
-                    latestdata = docdata['versions'][list(docdata['versions'].keys())[-1]]
-                    if is_valid_key(latestdata, 'deprecated'):
-                        package['deprecated'] = 1
-                        package['deprecatemessage'] = str(latestdata['deprecated'])
+                read_line_data(rawdata=rawdata, package=package)
                 # do insert
                 dncur.execute(insert_query, list(package.values()))
     print()
@@ -344,15 +348,68 @@ def update_scores_table_from_npmsio(conn: sqlite3.Connection) -> int:
     return num_valid
 
 
+def update_packages_table_from_api(raw_data_api:str, conn: sqlite3.Connection) -> int:
+    '''
+    packages table stores the metadata extracted from NPM replicate registry
+    '''
+    dncur = conn.cursor()
+    insert_query = ''' 
+    INSERT INTO 
+    packages(name, latest, author, authoremail, maintainers, 
+    versions, repotype, repourl, homepage, license, deprecated, 
+    deprecatemessage) 
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '''
+    index = 0
+    total_num = 0
+    with requests.get(raw_data_api, stream=True) as r:
+        for line in r.iter_lines():
+            line = line.decode('utf-8')
+            index += 1
+            # total number of packages from first line
+            if index == 1:
+                total_num = json.loads(line[:-10]+'}')['total_rows']
+                continue
+            # line limiter
+            if index > total_num+1:
+                break
+            # trim
+            if index < total_num+1:
+                line = line[:-2]
+            # package to be inserted
+            package = {
+                "name": None,
+                "latest": None,
+                "author": None,
+                "authoremail": None,
+                "maintainers": None,
+                "versions": None,
+                "repotype": None,
+                "repourl": None,
+                "homepage": None,
+                "license": None,
+                "deprecated": 0,
+                "deprecatemessage": None
+            }
+            rawdata = json.loads(line)
+            print("updating NPM packages metadata [{}/{}]".format(index-1, total_num), end='\r')
+            if is_valid_key(rawdata, 'doc'):
+                read_line_data(rawdata=rawdata, package=package)
+                # do insert
+                dncur.execute(insert_query, list(package.values()))
+    print()
+    return total_num
+
+
 def run_preprocess(doc_file=NPMRAW, out_db=NPMDB):
-    raw_npm_doc =doc_file # raw npm data
+    if not doc_file and not NPMRAW_API:
+        sys.exit("raw data file missing, please go to https://github.com/SiRumCz/REM-dataset for more information")
     out_db = NPMDB # ouput database e.g. 'dep_network.db'
     dnconn = sqlite3.connect(out_db)
 
     # create tables: packages, depend, scores
     create_tables(dnconn)
     # updates packages table
-    num_packages = update_packages_table(raw_npm_doc, dnconn)
+    num_packages = update_packages_table(doc_file, dnconn) if doc_file else update_packages_table_from_api(NPMRAW_API, dnconn)
     # update depend table
     num_depends = update_depend_table(dnconn)
     # update scores table
