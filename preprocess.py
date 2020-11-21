@@ -362,8 +362,8 @@ def update_raw_doc_from_api():
         with open(NPMRAW, 'wb') as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
-                print(f'--- {time.strftime('%H:%M:%S', time.gmtime(time.time()-start_time))} ---'. end='\r')
-    print(f'\nraw doc updated at {NPMRAW}({os.path.getsize(NPMRAW)bytes})')
+                print(f'--- {time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time))} ---', end='\r')
+    print(f'\nraw doc updated at {NPMRAW}({os.path.getsize(NPMRAW)}bytes)')
 
 
 def run_preprocess(doc_update=False, doc_file=NPMRAW, out_db=NPMDB):
