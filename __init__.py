@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 
-from preprocess import run_preprocess
+from preprocess import run_preprocess, update_raw_doc_from_api
 from rem_graph_dependabot import create
 
 app = Flask(__name__)
@@ -9,6 +9,15 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return "Hello, welcome to Ripple-Effect of Metrics (github.com/SiRumCz/REM)."
+
+
+@app.route('/update-raw-doc')
+def update_raw_doc():
+    try:
+        update_raw_doc_from_api()
+        return 'success'
+    except:
+        return 'fail'
 
 
 @app.route('/update-npm-database', methods = ['GET'])

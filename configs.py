@@ -5,7 +5,8 @@ if platform == 'win32':
   NPMDB='data\\dep_network_npm_search.db' # sqlite3 NPM dependency database
   NPMJSON='data\\npm_graph.json'
 else:
-  NPMRAW=''
+  #NPMRAW=''
+  NPMRAW='/var/www/FlaskApp/REM/data/REM-dataset/replicate_npm_all_doc_include_true'
   NPMDB='/var/www/FlaskApp/REM/data/dep_network_npm_search.db'
   NPMJSON='/var/www/FlaskApp/REM/data/npm_graph.json'
 NPMRAW_API='https://replicate.npmjs.com/_all_docs?include_docs=true'

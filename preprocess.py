@@ -6,10 +6,12 @@ Description:
 Preprocessing - retrieves data from raw npm data and store it into sqlite database 
 with packages info, dependency relationships, and npms.io scores
 '''
+import os # os.path.getsize
 import sys # args
 import sqlite3 # connection
-import json # dump
+import json # dump, loads
 import requests
+import time
 from utils import is_valid_key
 from configs import NPMDB, NPMRAW, NPMRAW_API
 
@@ -348,59 +350,23 @@ def update_scores_table_from_npmsio(conn: sqlite3.Connection) -> int:
     return num_valid
 
 
-def update_packages_table_from_api(raw_data_api:str, conn: sqlite3.Connection) -> int:
+def update_raw_doc_from_api():
     '''
-    packages table stores the metadata extracted from NPM replicate registry
+    metadata pulled from NPM replicate registry
     '''
-    dncur = conn.cursor()
-    insert_query = ''' 
-    INSERT INTO 
-    packages(name, latest, author, authoremail, maintainers, 
-    versions, repotype, repourl, homepage, license, deprecated, 
-    deprecatemessage) 
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '''
-    index = 0
-    total_num = 0
-    with requests.get(raw_data_api, stream=True) as r:
-        for line in r.iter_lines():
-            line = line.decode('utf-8')
-            index += 1
-            # total number of packages from first line
-            if index == 1:
-                total_num = json.loads(line[:-10]+'}')['total_rows']
-                continue
-            # line limiter
-            if index > total_num+1:
-                break
-            # trim
-            if index < total_num+1:
-                line = line[:-2]
-            # package to be inserted
-            package = {
-                "name": None,
-                "latest": None,
-                "author": None,
-                "authoremail": None,
-                "maintainers": None,
-                "versions": None,
-                "repotype": None,
-                "repourl": None,
-                "homepage": None,
-                "license": None,
-                "deprecated": 0,
-                "deprecatemessage": None
-            }
-            rawdata = json.loads(line)
-            print("updating NPM packages metadata [{}/{}]".format(index-1, total_num), end='\r')
-            if is_valid_key(rawdata, 'doc'):
-                read_line_data(rawdata=rawdata, package=package)
-                # do insert
-                dncur.execute(insert_query, list(package.values()))
-    print()
-    return total_num
+    print(f'downloading from {NPMRAW_API}..')
+    start_time = time.time()
+    with requests.get(NPMRAW_API, stream=True) as r:
+        r.encoding = 'utf-8'
+        r.raise_for_status()
+        with open(NPMRAW, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+                print(f'--- {time.strftime('%H:%M:%S', time.gmtime(time.time()-start_time))} ---'. end='\r')
+    print(f'\nraw doc updated at {NPMRAW}({os.path.getsize(NPMRAW)bytes})')
 
 
-def run_preprocess(doc_file=NPMRAW, out_db=NPMDB):
+def run_preprocess(doc_update=False, doc_file=NPMRAW, out_db=NPMDB):
     if not doc_file and not NPMRAW_API:
         sys.exit("raw data file missing, please go to https://github.com/SiRumCz/REM-dataset for more information")
     out_db = NPMDB # ouput database e.g. 'dep_network.db'
@@ -409,7 +375,9 @@ def run_preprocess(doc_file=NPMRAW, out_db=NPMDB):
     # create tables: packages, depend, scores
     create_tables(dnconn)
     # updates packages table
-    num_packages = update_packages_table(doc_file, dnconn) if doc_file else update_packages_table_from_api(NPMRAW_API, dnconn)
+    if doc_update:
+         update_raw_doc_from_api()
+    num_packages = update_packages_table(doc_file, dnconn)
     # update depend table
     num_depends = update_depend_table(dnconn)
     # update scores table
