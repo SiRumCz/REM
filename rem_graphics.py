@@ -419,3 +419,187 @@ def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
             # if a node in a filtered graph hasless children, then mark it 'circle-cross'
             filtered_G.nodes()[node]['symbol'] = 'circle-cross' if filtered_size < full_size else 'circle'
     return
+
+
+def create_deepndabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, title: str='', html_out: str=None, img_out: str=None):
+    """
+    draw REM subgraph to show on Dependabot Pull Request
+    
+    r_G: runtime graph
+    d_G: development graph
+    pos: graph layout
+    title: graph title
+    html_out: html output path
+    img_out: image output path
+    """
+    # node pos
+    Xv_r = [pos[n][0] for n in list(r_G.nodes())]
+    Yv_r = [pos[n][1] for n in list(r_G.nodes())]
+    Xv_d = [pos[n][0] for n in list(d_G.nodes())]
+    Yv_d = [pos[n][1] for n in list(d_G.nodes())]
+    # edge pos
+    Xed_r = []
+    Yed_r = []
+    Xed_d = []
+    Yed_d = []
+    # edge colors
+    ed_color_r = []
+    ed_color_d = []
+    # edge line-width
+    ed_linewidth_r = []
+    ed_linewidth_d = []
+    # edge opacity
+    ed_opacity_r = []
+    ed_opacity_d = []
+    # GITHUB RUNTIME
+    for u,v,m in r_G.edges(data=True):
+        Xed_r += [pos[u][0],pos[v][0]]
+        Yed_r += [pos[u][1],pos[v][1]]
+        ed_color_r += [m.get('color')]*2
+        ed_linewidth_r += [m.get('line-width')]*2
+        ed_opacity_r += [m.get('opacity')]*2
+    # GITHUB DEVELOPMENT
+    for u,v,m in d_G.edges(data=True):
+        Xed_d += [pos[u][0],pos[v][0]]
+        Yed_d += [pos[u][1],pos[v][1]]
+        ed_color_d += [m.get('color')]*2
+        ed_linewidth_d += [m.get('line-width')]*2
+        ed_opacity_d += [m.get('opacity')]*2
+    # data to be added to graph
+    data = []
+    # add edge traces to data
+    # runtime
+    for i in range(0, len(Xed_r)-2, 2):
+        data += [go.Scatter(
+                x=Xed_r[i:i+2],
+                y=Yed_r[i:i+2],
+                mode='lines',
+                opacity=ed_opacity_r[i],
+                legendgroup="rt",
+                showlegend=False,
+                line=dict(color=ed_color_r[i], width=ed_linewidth_r[i])
+        )]
+    if len(Xed_r) > 0:
+        data+=[go.Scatter(
+                x=Xed_r[len(Xed_r)-2:],
+                y=Yed_r[len(Yed_r)-2:],
+                mode='lines',
+                opacity=ed_opacity_r[-1],
+                legendgroup="rt",
+                name="rippe-effect runtime dependency relationships",
+                line=dict(color=ed_color_r[-1], width=ed_linewidth_r[-1])
+        )]
+    # development
+    for i in range(0, len(Xed_d)-2, 2):
+        data+=[go.Scatter(
+            x=Xed_d[i:i+2],
+            y=Yed_d[i:i+2],
+            mode='lines',
+            opacity=ed_opacity_d[i],
+            legendgroup="dev",
+            showlegend=False,
+            line=dict(color=ed_color_d[i], width=ed_linewidth_d[i])
+        )]
+    if len(Xed_d) > 0:
+        data+=[go.Scatter(
+                x=Xed_d[len(Xed_d)-2:],
+                y=Yed_d[len(Yed_d)-2:],
+                mode='lines',
+                opacity=ed_opacity_d[-1],
+                legendgroup="dev",
+                name="rippe-effect development dependency relationships",
+                line=dict(color=ed_color_d[-1], width=ed_linewidth_d[-1])
+        )]
+    # add node traces to data
+    if len(Xv_r) > 0:
+        data += [go.Scatter(x=Xv_r,
+               y=Yv_r,
+               mode='markers',
+               legendgroup="rt",               
+               name='dependencies required during use (red means vulnerable)',
+               marker=dict(symbol=[m['marker-symbol'] for x,m in r_G.nodes(data=True)],
+                             size=[m['marker-size'] for x,m in r_G.nodes(data=True)],
+                             opacity=1,
+                             color=[m['color'] for x,m in r_G.nodes(data=True)],
+                             line=dict(color=[m['color'] for x,m in r_G.nodes(data=True)], width=[m['line-width'] for x,m in r_G.nodes(data=True)])
+                             ),
+               text=[m['text-hover'] for x,m in r_G.nodes(data=True)],
+               hovertemplate='%{text}',
+               hoverlabel=dict(bgcolor='#3c3c3c', 
+                                font=dict(color='white'))
+               )]
+    if len(Xv_d) > 0:
+        data+=[go.Scatter(x=Xv_d,
+               y=Yv_d,
+               mode='markers',
+               legendgroup="dev",               
+               name='dependencies required during build (red means vulnerable)',
+               marker=dict(symbol=[m['marker-symbol'] for x,m in d_G.nodes(data=True)],
+                             size=[m['marker-size'] for x,m in d_G.nodes(data=True)],
+                             opacity=1,
+                             color=[m['color'] for x,m in d_G.nodes(data=True)],
+                             line=dict(color=[m['color'] for x,m in d_G.nodes(data=True)], width=[m['line-width'] for x,m in d_G.nodes(data=True)])
+                             ),
+               text=[m['text-hover'] for x,m in d_G.nodes(data=True)],
+               hovertemplate='%{text}',
+               hoverlabel=dict(bgcolor='#3c3c3c', 
+                                font=dict(color='white'))
+               )]
+    # create
+    fig=go.Figure(data=data)
+    # update layout
+    fig.update_layout(
+        title=title,
+        title_x=0.5,
+        legend=dict(orientation="h", 
+                    font=dict(size=12)),
+        xaxis=go.layout.XAxis(showticklabels=False),
+        yaxis=go.layout.YAxis(showticklabels=False),
+        paper_bgcolor='white',
+        plot_bgcolor='white'
+    )
+    # add annotations
+    for n,m in r_G.nodes(data=True):
+        if m.get('text-label'):
+            fig.add_annotation(
+                x=pos[n][0],
+                y=pos[n][1],
+                text=m.get('text-label'),
+                showarrow=True,
+                arrowcolor="#3c3c3c",
+                arrowhead=1,
+                arrowwidth=2,
+                startarrowsize=1.5,
+                yshift=10,
+                font=dict(
+                    size=20,
+                    color="#3c3c3c"))
+    for n,m in d_G.nodes(data=True):
+        if m.get('text-label'):
+            fig.add_annotation(
+                x=pos[n][0],
+                y=pos[n][1],
+                text=m.get('text-label'),
+                showarrow=True,
+                arrowcolor="#3c3c3c",
+                arrowhead=1,
+                arrowwidth=2,
+                startarrowsize=1.5,
+                yshift=10,
+                font=dict(
+                    size=20,
+                    color="#3c3c3c"))
+    # update graph scale
+    x_pos_list = [v[0] for v in pos.values()]
+    y_pos_list = [v[1] for v in pos.values()]
+    xoffset = (max(x_pos_list) - min(x_pos_list)) * 0.05
+    yoffset = (max(y_pos_list) - min(y_pos_list)) * 0.05
+    fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
+    fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
+    
+    if img_out:
+        print(f'exporting REM dependency graph to {img_out}.')
+        plotly_save_to_local_img(fig, img_out)
+    if html_out:
+        print(f'exporting REM dependency graph to {html_out}.')
+        fig.write_html(html_out)
