@@ -45,7 +45,7 @@ def rem_highlight():
 
 
 @app.route('/rem-vulnerable-with-lockfile', methods = ['POST'])
-def rem_vulnerable_with_lockfile():
+def pr_rem_vulnerable_with_lockfile():
     """
     Creates a plain Ripple-Effect of Metrics(security advisory) that highlights the dependencies
     that is, a sub-dependency graph using a lockfile ('package-lock.json' or 'npm-shrinkwrap.json')
@@ -67,8 +67,8 @@ def rem_vulnerable_with_lockfile():
     return jsonify({'pr_link': pr_link, 'live_link':live_link})
 
 
-@app.route('/rem-vulnerable-with-lockfile-issue', methods = ['POST'])
-def rem_vulnerable_with_lockfile():
+@app.route('/rem-with-lockfile-for-issue', methods = ['POST'])
+def issue_rem_with_lockfile():
     """
     Creates a Ripple-Effect of Metrics(security advisory) that highlights the dependencies health,
     that is, a complete dependency graph using a lockfile ('package-lock.json' only)
