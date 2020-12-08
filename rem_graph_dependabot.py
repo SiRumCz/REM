@@ -540,11 +540,17 @@ def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highligh
         } for n,m in G.nodes(data=True) if m.get('type') != 'application-root'}
     assign_node_attrs_by_data(G, data)
     # assign some basic plotly attrs
+    neighbors = list(G.neighbors(root)) # direct dependencies
+    data = {
+        decrypt_nodename(n)[0]: {'line-color': '#5077BE' if n in neighbors else 'grey'}
+        for n in G.nodes()
+    }
+    assign_node_attrs_by_data(G, data)
     data = {decrypt_nodename(n)[0]: {
         'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
         'marker-size': 10, 
         'marker-symbol': 'circle', 
-        'line-width': 1,
+        'line-width': 2 if n in neighbors else 1,
         'text-hover': dependabot_issue_hoverlabel(node=(n,m), key=highlight_metric, out_list=['version', 'final', 'quality', 'popularity', 'maintenance'])
         } for n,m in G.nodes(data=True)}
     assign_node_attrs_by_data(G, data)
@@ -552,7 +558,7 @@ def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highligh
     runtime_G, development_G = split_G_by_dependency_type(G)
     # assign attrs to edges
     assign_edge_attrs(runtime_G, {'line-width':0.8, 'opacity':1, 'color':'grey'})
-    assign_edge_attrs(development_G, {'line-width':3.2, 'opacity':0.7, 'color':'lightgrey'})
+    assign_edge_attrs(development_G, {'line-width':3.2, 'opacity':0.8, 'color':'lightgrey'})
     # generate out files
     uname = str(uuid.uuid1())
     html_outfile = f'{uname}.html'

@@ -518,6 +518,7 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
     Xv_d_symbols = [m.get('marker-symbol') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-symbol') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_d_sizes = [m.get('marker-size') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-size') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_d_colors = [m.get('color') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('color') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_d_linecolors = [m.get('line-color') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-color') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_d_linewidth = [m.get('line-width') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-width') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_d_texthover = [m['text-hover'] for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m['text-hover'] for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
     if len(Xv_d) > 1:
@@ -526,12 +527,12 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                mode='markers',
                legendgroup="dev",
                visible="legendonly" if len(Xv_r)>0 else True,
-               name='dependencies required during build',
+               name='dependencies required during build (blue ring means direct dependencies)',
                marker=dict(symbol=Xv_d_symbols[:-1],
                              size=Xv_d_sizes[:-1],
                              opacity=1,
                              color=Xv_d_colors[:-1],
-                             line=dict(color='grey', width=Xv_d_linewidth[:-1]),
+                             line=dict(color=Xv_d_linecolors[:-1], width=Xv_d_linewidth[:-1]),
                              colorscale="RdYlGn",
                              showscale=True,
                              cmin=0.0,
@@ -555,7 +556,7 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                              size=Xv_d_sizes[-1:],
                              opacity=1,
                              color=Xv_d_colors[-1:],
-                             line=dict(color='grey', width=Xv_d_linewidth[-1:])
+                             line=dict(color=Xv_d_linecolors[-1:], width=Xv_d_linewidth[-1:])
                              ),
                text=Xv_d_texthover[-1:],
                hovertemplate='%{text}'
@@ -563,6 +564,7 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
     Xv_r_symbols = [m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_r_sizes = [m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_r_colors = [m.get('color') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('color') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_r_linecolors = [m.get('line-color') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-color') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_r_linewidth = [m.get('line-width') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-width') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_r_texthover = [m['text-hover'] for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m['text-hover'] for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     if len(Xv_r) > 1:
@@ -570,12 +572,12 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                y=Yv_r[:-1],
                mode='markers',
                legendgroup="rt",        
-               name='dependencies required during use',       
+               name='dependencies required during use (blue ring means direct dependencies)',       
                marker=dict(symbol=Xv_r_symbols[:-1],
                              size=Xv_r_sizes[:-1],
                              opacity=1,
                              color=Xv_r_colors[:-1],
-                             line=dict(color='grey', width=Xv_r_linewidth[:-1]),
+                             line=dict(color=Xv_r_linecolors[:-1], width=Xv_r_linewidth[:-1]),
                              colorscale="RdYlGn",
                              showscale=True,
                              cmin=0.0,
@@ -599,7 +601,7 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                              size=Xv_r_sizes[-1:],
                              opacity=1,
                              color=Xv_r_colors[-1:],
-                             line=dict(color='grey', width=Xv_r_linewidth[-1:])
+                             line=dict(color=Xv_r_linecolors[-1:], width=Xv_r_linewidth[-1:])
                              ),
                text=Xv_r_texthover[-1:],
                hovertemplate='%{text}'
