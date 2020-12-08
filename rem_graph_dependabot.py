@@ -152,6 +152,8 @@ def decrypt_nodename(name:str) -> list:
     dependency node will be stored as "<name>!<version>!<breadcrumbs>" (e.g. "lodash!4.17.11!root->@babel/core")
     """
     key = '!'
+    if key not in name:
+        return [name]
     return name.split(key)
 
 
@@ -182,7 +184,7 @@ def split_G_by_dependency_type(G) -> tuple:
 
 
 def combine_G_by_dependency_type(r_G, d_G):
-    return nx.compose(r_G, d_G)
+    return nx.compose(r_G, d_G).copy()
 
 
 def create_ripple_effect_subgraph(G, packages) -> nx.DiGraph:
@@ -218,27 +220,16 @@ def create_ripple_effect_subgraph(G, packages) -> nx.DiGraph:
 
 def assign_edge_attrs(G: nx.DiGraph, data:dict):
     for key,val in data.items():
-        # if key == 'opacity':
-        #     for s,t,attrs in G.edges(data=True):
-        #         original_colorcode = attrs.get('color') if attrs.get('color') else 'grey'                    
-        #         color_codes = [str(x) for x in ImageColor.getrgb(original_colorcode)]
-        #         modified_colorcode = 'rgba('+','.join(color_codes)+f",{data.get('opacity')})"
-        # else:
-        #     nx.set_edge_attributes(G, val, key)
         nx.set_edge_attributes(G, val, key)
 
 
-def node_meta_to_hover_text(meta: dict) -> str:
+def node_meta_to_hover_text(meta: dict, ll: list=['version']) -> str:
     """
-    meta contains: name, version, breadcrumbs(paths)
+    meta must contain name attr
     """
-    # ll = ['version', 'paths']
-
-    ll = ['version']
     texts = f"<b>{meta.get('name')}</b>"
     for k in ll:
-        if k in meta:
-            texts += f"<br><b>{k}</b>: {meta.get(k)}"
+        texts += f"<br><b>{k}</b>: {meta.get(k)}"
     return texts
 
 
@@ -276,6 +267,56 @@ def assign_node_attrs(G: nx.DiGraph):
                 G.nodes()[n]['marker-size'] = 15
                 G.nodes()[n]['line-width'] = 3
                 G.nodes()[n]['color'] = 'red'
+
+
+def assign_node_attrs_by_data(G:nx.DiGraph, data:dict):
+    """
+    add items in data as attributes to each node in graph G
+    G: graph
+    data: in dictionary
+    e.g.
+    {
+        'lodash': {
+            'final': 0.65123,
+            'popularity': 0.6451231,
+            ...
+        },
+        ...
+    }
+    """
+    if not data:
+        return
+    # prepare name mapping first
+    name_table = {}
+    for node, meta in G.nodes(data=True):
+        # if meta.get('type') == 'application-root':
+        #     continue
+        decrypted = decrypt_nodename(node)
+        # { "lodash" : ["lodash!4.17.11!root"], }
+        name_table[decrypted[0]] = name_table.get(decrypted[0])+[node] if name_table.get(decrypted[0]) else [node]
+    for key, val in data.items():
+        if not name_table.get(key):
+            # this should not happen
+            current_app.logger.debug(f'key {key} not found -- line {get_linenumber()}')
+            print(key)
+            continue
+        for node in name_table.get(key):
+            for attr_name, attr_val in val.items():
+                G.nodes()[node][attr_name] = attr_val
+
+
+def dependabot_issue_hoverlabel(node: tuple, key: str, re_metric: str=None, out_list:list=['version']) -> str:
+    if re_metric:
+        out_list.append(re_metric)
+    nodename, data = node
+    name = decrypt_nodename(nodename)[0]
+    s = '<b>'+name+'</b>'
+    for k,v in sorted(data.items()):
+        if k == key:
+            s += '<br><b><i>{}</i></b>: {}'.format(k, v)
+        elif k in out_list:
+            s += '<br><b>{}</b>: {}'.format(k, v)
+    return s
 
 
 def add_to_installed_dependencies(installed_dependencies, data, breadcrumbs):
@@ -480,12 +521,61 @@ def create_from_lockfile_and_package_json(package_json: str, lockfile: str) -> n
     return application_G
 
 
+def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highlight_metric:str='final') -> tuple:
+    """
+    create a rem graph that contains a complete dependency graph and metrics of health
+    """
+    # create a full dependency graph
+    G = create_from_lockfile_and_package_json(package_json, lockfile)
+    # generate graph layout
+    root = [x for x,m in G.nodes(data=True) if m.get('type') == 'application-root'][0]
+    pos = nx.nx_pydot.graphviz_layout(G=G, prog='dot', root=root)
+    # fetch health metrics from database and add to graph
+    dependency_list = {decrypt_nodename(n)[0] for n,m in G.nodes(data=True) if m.get('type') != 'application-root'}
+    health_metrics = fetch_metric_data_from_list_by_db(plist=dependency_list)
+    assign_node_attrs_by_data(G, health_metrics)
+    # assign version attr
+    data = {decrypt_nodename(n)[0]: {
+        'version': decrypt_nodename(n)[1]
+        } for n,m in G.nodes(data=True) if m.get('type') != 'application-root'}
+    assign_node_attrs_by_data(G, data)
+    # assign some basic plotly attrs
+    data = {decrypt_nodename(n)[0]: {
+        'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
+        'marker-size': 10, 
+        'marker-symbol': 'circle', 
+        'line-width': 1,
+        'text-hover': dependabot_issue_hoverlabel(node=(n,m), key=highlight_metric, out_list=['version', 'final', 'quality', 'popularity', 'maintenance'])
+        } for n,m in G.nodes(data=True)}
+    assign_node_attrs_by_data(G, data)
+    # separate by type
+    runtime_G, development_G = split_G_by_dependency_type(G)
+    # assign attrs to edges
+    assign_edge_attrs(runtime_G, {'line-width':0.8, 'opacity':1, 'color':'grey'})
+    assign_edge_attrs(development_G, {'line-width':3.2, 'opacity':0.7, 'color':'lightgrey'})
+    # generate out files
+    uname = str(uuid.uuid1())
+    html_outfile = f'{uname}.html'
+    img_outfile = f'{uname}.png'
+    html_out_path = join(REM_DEPENDABOT_HTML_OUTDIR, html_outfile)
+    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile)
+    html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
+    img_out_link = join(REM_DEPENDABOT_IMG_URL, img_outfile)
+    # create graph files
+    create_deepndabot_issue_rem_graph(r_G=runtime_G, d_G=development_G, pos=pos, metric=highlight_metric,
+        title=f'Ripple-Effect of Health Metric Graph of {root}', html_out=html_out_path, img_out=img_out_path)
+    return (img_out_link, html_out_link)
+
+
 def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfile: str) -> tuple:
+    """
+    creates a rem subgraph that contains only the application and paths and nodes affected by 
+    the highlighted dependencies.
+    """
     # create a full dependency graph
     G = create_from_lockfile_and_package_json(package_json, lockfile)
     # create a ripple-effect of metrics subgraph
     rem_sub_G = create_ripple_effect_subgraph(G, packages)
-    a = list(rem_sub_G.edges(data=True))
     runtime_rem_sub_G, development_rem_sub_G = split_G_by_dependency_type(rem_sub_G)
     # assign attrs to be sent to plotly
     assign_edge_attrs(runtime_rem_sub_G, {'line-width':0.8, 'opacity':1})
@@ -511,15 +601,34 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
 
 def test_subgraph_on_lockfile():
     """
-    test on subgraph using lockfile
+    test on subgraph using lockfile and package.json
     """
     lockfile_one = join('D:\\myGithubRepo\\REM\\test', 'lockfiles', 'package-lock.json')
     package_json_one = join('D:\\myGithubRepo\\REM\\test', 'package_jsons', 'package.json')
-    lockfile_two = join('D:\\myGithubRepo\\REM\\test', 'lockfiles', 'npm-shrinkwrap.json')
     lockfile = open(lockfile_one, 'r').read()
     package_json_file = open(package_json_one, 'r').read()
     print(create_dependabot_pr_rem_subgraph(['handlebars!4.1.2', 'dot-prop!4.2.0'], package_json_file, lockfile))
 
 
+def test_issue_rem_graph_on_lockfile():
+    """
+    test on full rem graph using lockfile and package.json
+    """
+    test_locs = [
+        'D:\\myGithubRepo\\rem_testrepos\\agalwood-Motrix',
+        'D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer',
+        'D:\\myGithubRepo\\rem_testrepos\\DustinBrett-x'
+    ]
+
+    for test in test_locs:
+        lockfile_loc = join(test, 'package-lock.json')
+        package_json_loc = join(test, 'package.json')
+        lockfile = open(lockfile_loc, 'r').read()
+        package_json = open(package_json_loc, 'r').read()
+        print(create_dependabot_issue_rem_graph(package_json=package_json, 
+            lockfile=lockfile, highlight_metric='final'))
+
+
 if __name__ == '__main__':
-    test_subgraph_on_lockfile()
+    # test_subgraph_on_lockfile()
+    test_issue_rem_graph_on_lockfile()

@@ -13,6 +13,7 @@ import sys
 from os.path import join, isfile
 from configs import NPMDB, NPMJSON, NPMGRAPH_RELOAD
 from networkx.readwrite import json_graph
+from inspect import currentframe
 
 
 def is_valid_key(data: dict, key: str) -> bool:
@@ -20,6 +21,15 @@ def is_valid_key(data: dict, key: str) -> bool:
     check if key is valid
     '''
     return data and key and (key in data) and (data[key])
+
+
+def get_linenumber():
+    """
+    credit:
+    https://stackoverflow.com/questions/3056048/filename-and-line-number-of-python-script
+    """
+    cf = currentframe()
+    return cf.f_back.f_lineno
 
 
 def retrieve_package_json_deps(owner, repo, branch) -> tuple:
@@ -48,6 +58,92 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
     except:
         print('request failed.')
         return (None, None)
+
+
+def fetch_metric_data_from_list_by_db(plist) -> dict:
+    """
+    fetch metric data for a given list of packages using prefetched database
+    """
+    if not plist:
+        return {}
+    try:
+        conn = sqlite3.connect(NPMDB)
+    except:
+        print('failed to connect database')
+        return {}
+    c = conn.cursor()
+    npm_search_score_query = "SELECT final, popularity, quality, maintenance FROM scores WHERE name = ?"
+    result = {}
+    count = 0
+    for ind,pname in enumerate(plist):
+        # print(f"{ind} {pname}")
+        c.execute(npm_search_score_query, (pname,))
+        data = c.fetchone()
+        if not data:
+            continue
+        pkg = { x: None for x in ['final', 'popularity', 'quality', 'maintenance'] }
+        if data[0]:
+            pkg['final'] = round(data[0], 2)
+        if data[1]:
+            pkg['popularity'] = round(data[1], 2)
+        if data[2]:
+            pkg['quality'] = round(data[2], 2)
+        if data[3]:
+            pkg['maintenance'] = round(data[3], 2)
+        result[pname] = pkg
+        count += 1
+    print(f"fetched {count} from {len(plist)} NPM packages")
+    if conn:
+        conn.close()
+    return result
+
+
+def fetch_metric_data_from_list_by_api(plist, api="http://registry.npmjs.org/-/v1/search", param:str='text') -> dict:
+    """
+    fetch metric data for a given list of packages using provided API 
+    default API: http://registry.npmjs.org/-/v1/search?text=
+    """
+    if not plist:
+        return {}
+    result = {}
+    count = 0
+    for ind,pname in enumerate(plist):
+        print(f"{ind} {pname}")
+        resp = None
+        try:
+            headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+            }
+            resp = requests.get(api, headers=headers, params={param:pname})
+        except:
+            continue
+        if not resp or resp.status_code != 200:
+            continue
+        data = resp.json()
+        objects = data.get('objects')
+        if not objects:
+            continue
+        pdata = objects[0] # exact match should appear at first index
+        package = pdata.get('package')
+        # check if the fetched package is actual packages
+        if not package or package.get('name') != pname:
+            continue
+        score = pdata.get('score')
+        if not score:
+            continue
+        pkg = { x: 0 for x in ['final', 'popularity', 'quality', 'maintenance'] }
+        pkg['final'] = score.get('final')
+        detail = score.get('detail')
+        if detail:
+            pkg['popularity'] = detail.get('popularity')
+            pkg['quality'] = detail.get('quality')
+            pkg['maintenance'] = detail.get('maintenance')
+        result[pname] = pkg
+        count += 1
+    print(f"fetched {count} from {len(plist)} NPM packages")
+    return result
 
 
 def create_graph(node_list: list, dep_rel_list: list) -> nx.DiGraph:
