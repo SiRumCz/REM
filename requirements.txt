@@ -8,3 +8,4 @@ pydot
 Flask
 flask-cors
 Pillow
+numpy==1.19.3 # https://github.com/twintproject/twint/issues/1030

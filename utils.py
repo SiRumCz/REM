@@ -75,7 +75,7 @@ def fetch_metric_data_from_list_by_db(plist) -> dict:
     npm_search_score_query = "SELECT final, popularity, quality, maintenance FROM scores WHERE name = ?"
     result = {}
     count = 0
-    for ind,pname in enumerate(plist):
+    for pname in plist:
         # print(f"{ind} {pname}")
         c.execute(npm_search_score_query, (pname,))
         data = c.fetchone()
