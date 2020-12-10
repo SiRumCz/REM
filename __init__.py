@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Hello, welcome to Ripple-Effect of Metrics (github.com/SiRumCz/REM)."
+    return "Hello, welcome to Ripple-Effect of Metrics (github.com/sirumcz/rem)."
 
 
 @app.route('/update-raw-doc')
@@ -27,21 +27,6 @@ def update_npm_database():
     """
     # run_preprocess()
     return 'success'
-
-
-@app.route('/rem-highlight', methods = ['POST'])
-def rem_highlight():
-    """
-    Creates filtered Ripple-Effect of Metrics that highlights packages
-    {
-        pr_link: http://.../.img,
-        live_link: http://.../.html
-    }
-    """
-    packages = request.form.getlist('packages')
-    depfile = request.form['depfile']
-    pr_link, live_link = create(packages=packages, depfile=depfile)
-    return jsonify({'pr_link': pr_link, 'live_link':live_link})
 
 
 @app.route('/rem-vulnerable-with-lockfile', methods = ['POST'])

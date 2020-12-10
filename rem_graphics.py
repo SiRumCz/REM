@@ -478,7 +478,6 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
             mode='lines',
             opacity=ed_opacity_d[i],
             legendgroup="dev",
-            visible="legendonly" if len(Xv_r)>0 else True,
             showlegend=False,
             line=dict(color=ed_color_d[i], width=ed_linewidth_d[i])
         )]
@@ -489,7 +488,6 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                 mode='lines',
                 opacity=ed_opacity_d[-1],
                 legendgroup="dev",
-                visible="legendonly" if len(Xv_r)>0 else True,
                 name="development dependency relationships",
                 line=dict(color=ed_color_d[-1], width=ed_linewidth_d[-1])
         )]
@@ -526,7 +524,6 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                y=Yv_d[:-1],
                mode='markers',
                legendgroup="dev",
-               visible="legendonly" if len(Xv_r)>0 else True,
                name='dependencies required during build (blue ring means direct dependencies)',
                marker=dict(symbol=Xv_d_symbols[:-1],
                              size=Xv_d_sizes[:-1],
@@ -550,7 +547,6 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                y=Yv_d[-1:],
                mode='markers',
                legendgroup="dev",
-               visible="legendonly" if len(Xv_r)>0 else True,             
                name='application in name(version)',
                marker=dict(symbol=Xv_d_symbols[-1:],
                              size=Xv_d_sizes[-1:],
@@ -635,7 +631,7 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
         fig.write_html(html_out)
 
 
-def create_deepndabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, title: str='', html_out: str=None, img_out: str=None):
+def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, title: str='', html_out: str=None, img_out: str=None):
     """
     draw REM subgraph to show on Dependabot Pull Request
     

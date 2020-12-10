@@ -8,13 +8,11 @@ import networkx as nx # DiGraph, descendants, all_simple_paths, set_node_attribu
 from os.path import join, isfile # path.join, isfile
 import json
 import uuid # uuid1
-from PIL import ImageColor # ImageColor.getrgb()
 
 from configs import REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_DEPENDABOT_HTML_URL, REM_DEPENDABOT_IMG_URL
 from utils import *
 from rem_filter import *
 from rem_graphics import *
-
 
 from flask import current_app
 
@@ -34,112 +32,6 @@ def prepare_filtered_graph(project_rt_sub_G, project_dev_sub_G, rt_ripple_effect
             del m['runtime']
 
     return nx.compose(temp_rt_G, temp_dev_G).copy()
-
-
-def prepare_ripple_effect_highlights(application_name, G, packages) -> set:
-    nx.set_node_attributes(G, False, 'ripple')
-    nx.set_edge_attributes(G, 'lightgrey', 'color')
-
-    ripple_effect_edges = set()
-
-    for p in packages:
-        if not G.has_node(p):
-            continue
-        G.nodes()[p]['ripple'] = True
-        for path in list(nx.all_simple_paths(G, source=application_name, target=p)):
-            for i in range(len(path)-1):
-                ripple_effect_edges.add((path[i], path[i + 1]))
-                G.edges[(path[i], path[i+1])]['color'] = '#8b0000'
-    
-    return ripple_effect_edges
-
-
-def prepare_sub_graphs(npm_G, rt_deps, dev_deps, application_name) -> tuple:
-    """
-    create target application (ROOT-APPLICATION) sub-graphs
-    """
-    npm_G.add_node(application_name, type='GITHUB')
-    temp_G = npm_G.copy()
-    if rt_deps is not None:
-        for k, v in rt_deps.items():
-            temp_G.add_edge(application_name, str(k), runtime_constraint=str(v))
-    application_rt_sub_G = temp_G.subgraph(list(nx.descendants(temp_G, application_name))+[application_name]).copy()
-    for ed in application_rt_sub_G.edges():
-        application_rt_sub_G.edges()[ed]['runtime'] = True
-    temp_G = npm_G.copy()
-    if dev_deps is not None:
-        for k, v in dev_deps.items():
-            temp_G.add_edge(application_name, str(k), dev_constraint=str(v))
-    application_dev_sub_G = temp_G.subgraph(list(nx.descendants(temp_G, application_name))+[application_name]).copy()
-    for ed in application_dev_sub_G.edges():
-        application_dev_sub_G.edges()[ed]['development'] = True
-
-    return (application_rt_sub_G.copy(), application_dev_sub_G.copy())
-
-
-def create(packages, depfile) -> tuple:
-    """
-    create REM graphs for dependabot to use in Pull Request
-    returns:
-        a url to be used in PR: http://.../.img,
-        a url to be used as live tool: http://.../.html
-    """
-    keyword = 'final'
-
-    # runtime and development dependencies
-    depdata = {}
-    try:
-        depdata = json.loads(depfile)
-    except:
-        print('invalid input dependency file')
-        return (None, None)
-
-    rt_deps = depdata['dependencies'] if is_valid_key(depdata, 'dependencies') else None
-    dev_deps = depdata['devDependencies'] if is_valid_key(depdata, 'devDependencies') else None
-            
-    if not rt_deps and not dev_deps: 
-        current_app.logger.debug('target application does not contain any runtime and development dependencies')
-        return (None, None)
-
-    # prepare npm packages graph
-    prepare_npm_graph()
-    npm_G = read_graph_json(NPMJSON)
-
-    # add github application to the NPM network
-    application_name = f'{depdata.get("name")}({depdata.get("version")})'
-    # prepare sub-graph
-    application_rt_sub_G, application_dev_sub_G = prepare_sub_graphs(npm_G, rt_deps, dev_deps, application_name)
-    npm_G.clear()
-    # prepare ripple-effects
-    rt_ripple_effect_edges = prepare_ripple_effect_highlights(application_name=application_name, 
-        G=application_rt_sub_G, packages=packages)
-    dev_ripple_effect_edges = prepare_ripple_effect_highlights(application_name=application_name, 
-        G=application_dev_sub_G, packages=packages)
-    application_sub_G = nx.compose(application_rt_sub_G, application_dev_sub_G)
-    # prepare graph layout
-    pos = nx.nx_pydot.graphviz_layout(G=application_sub_G, prog='dot', root=application_name)
-    # run filter
-    filtered_application_sub_G = prepare_filtered_graph(project_rt_sub_G=application_rt_sub_G, project_dev_sub_G=application_dev_sub_G, 
-        rt_ripple_effect_edges=rt_ripple_effect_edges, dev_ripple_effect_edges=dev_ripple_effect_edges, 
-        pname=application_name, keyword=keyword)
-    # run greyout
-    gray_out_non_problematics(G=filtered_application_sub_G, root=application_name, keyword=keyword, re_metric='ripple')
-    # assign node symbol
-    assign_graph_node_symbol(application_sub_G, filtered_application_sub_G)
-
-    uname = str(uuid.uuid1())
-    html_outfile = f'{uname}.html'
-    img_outfile = f'{uname}.png'
-    html_out_path = join(REM_DEPENDABOT_HTML_OUTDIR, html_outfile)
-    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile)
-    html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
-    img_out_link = join(REM_DEPENDABOT_IMG_URL, img_outfile)
-
-    plotly_graph_to_html(G=filtered_application_sub_G, pos=pos, 
-                title=f'filtered Ripple-Effect of Metrics(REM) dependency graph for {application_name}', 
-                key=keyword, outfile=html_out_path, out_img=img_out_path, re_metric='ripple')
-    
-    return (img_out_link, html_out_link)
 
 
 def encrypt_nodename(*params) -> str:
@@ -548,17 +440,17 @@ def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highligh
     assign_node_attrs_by_data(G, data)
     data = {decrypt_nodename(n)[0]: {
         'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
-        'marker-size': 10, 
+        'marker-size': 17 if n in neighbors else 10, 
         'marker-symbol': 'circle', 
-        'line-width': 2 if n in neighbors else 1,
+        'line-width': 3 if n in neighbors else 1,
         'text-hover': dependabot_issue_hoverlabel(node=(n,m), key=highlight_metric, out_list=['version', 'final', 'quality', 'popularity', 'maintenance'])
         } for n,m in G.nodes(data=True)}
     assign_node_attrs_by_data(G, data)
     # separate by type
     runtime_G, development_G = split_G_by_dependency_type(G)
     # assign attrs to edges
-    assign_edge_attrs(runtime_G, {'line-width':0.8, 'opacity':1, 'color':'grey'})
-    assign_edge_attrs(development_G, {'line-width':3.2, 'opacity':0.8, 'color':'lightgrey'})
+    assign_edge_attrs(runtime_G, {'line-width':0.8, 'opacity':0.8, 'color':'#688aa8'})
+    assign_edge_attrs(development_G, {'line-width':2.4, 'opacity':0.8, 'color':'#c4c7ca'})
     # generate out files
     uname = str(uuid.uuid1())
     html_outfile = f'{uname}.html'
@@ -600,7 +492,7 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
     html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
     img_out_link = join(REM_DEPENDABOT_IMG_URL, img_outfile)
     # create graph files
-    create_deepndabot_pr_rem_subgraph(r_G=runtime_rem_sub_G, d_G=development_rem_sub_G, pos=pos, 
+    create_dependabot_pr_rem_subgraph(r_G=runtime_rem_sub_G, d_G=development_rem_sub_G, pos=pos, 
         title=f'Ripple-Effect of Vulnerability Metric Graph of {root}', html_out=html_out_path, img_out=img_out_path)
     return (img_out_link, html_out_link)
 
@@ -636,5 +528,5 @@ def test_issue_rem_graph_on_lockfile():
 
 
 if __name__ == '__main__':
-    # test_subgraph_on_lockfile()
-    test_issue_rem_graph_on_lockfile()
+    test_subgraph_on_lockfile()
+    # test_issue_rem_graph_on_lockfile()
