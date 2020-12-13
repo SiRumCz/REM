@@ -422,7 +422,7 @@ def assign_graph_node_symbol(full_G: nx.Graph, filtered_G: nx.Graph):
     return
 
 
-def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, metric: str='final', title: str='', html_out: str=None, img_out: str=None):
+def draw_dependabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, metric: str='final', title: str='', html_out: str=None, img_out: str=None):
     """
     draw REM graph to show on Dependabot Issue creator
     
@@ -631,7 +631,7 @@ def create_deepndabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
         fig.write_html(html_out)
 
 
-def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, title: str='', html_out: str=None, img_out: str=None):
+def draw_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict, title: str='', html_out: str=None, img_out: str=None):
     """
     draw REM subgraph to show on Dependabot Pull Request
     
@@ -643,10 +643,11 @@ def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
     img_out: image output path
     """
     # node pos
-    Xv_r = [pos[n][0] for n in list(r_G.nodes())]
-    Yv_r = [pos[n][1] for n in list(r_G.nodes())]
-    Xv_d = [pos[n][0] for n in list(d_G.nodes())]
-    Yv_d = [pos[n][1] for n in list(d_G.nodes())]
+    # make sure application is at the last index of the list
+    Xv_r = [pos[n][0] for n,m in r_G.nodes(data=True) if m.get('type') != 'application-root'] + [pos[n][0] for n,m in r_G.nodes(data=True) if m.get('type') == 'application-root']
+    Yv_r = [pos[n][1] for n,m in r_G.nodes(data=True) if m.get('type') != 'application-root'] + [pos[n][1] for n,m in r_G.nodes(data=True) if m.get('type') == 'application-root']
+    Xv_d = [pos[n][0] for n,m in d_G.nodes(data=True) if m.get('type') != 'application-root'] + [pos[n][0] for n,m in d_G.nodes(data=True) if m.get('type') == 'application-root']
+    Yv_d = [pos[n][1] for n,m in d_G.nodes(data=True) if m.get('type') != 'application-root'] + [pos[n][1] for n,m in d_G.nodes(data=True) if m.get('type') == 'application-root']
     # edge pos
     Xed_r = []
     Yed_r = []
@@ -678,27 +679,6 @@ def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
     # data to be added to graph
     data = []
     # add edge traces to data
-    # runtime
-    for i in range(0, len(Xed_r)-2, 2):
-        data += [go.Scatter(
-                x=Xed_r[i:i+2],
-                y=Yed_r[i:i+2],
-                mode='lines',
-                opacity=ed_opacity_r[i],
-                legendgroup="rt",
-                showlegend=False,
-                line=dict(color=ed_color_r[i], width=ed_linewidth_r[i])
-        )]
-    if len(Xed_r) > 0:
-        data+=[go.Scatter(
-                x=Xed_r[len(Xed_r)-2:],
-                y=Yed_r[len(Yed_r)-2:],
-                mode='lines',
-                opacity=ed_opacity_r[-1],
-                legendgroup="rt",
-                name="rippe-effect runtime dependency relationships",
-                line=dict(color=ed_color_r[-1], width=ed_linewidth_r[-1])
-        )]
     # development
     for i in range(0, len(Xed_d)-2, 2):
         data+=[go.Scatter(
@@ -717,44 +697,104 @@ def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                 mode='lines',
                 opacity=ed_opacity_d[-1],
                 legendgroup="dev",
-                name="rippe-effect development dependency relationships",
+                name="development dependency relationships",
                 line=dict(color=ed_color_d[-1], width=ed_linewidth_d[-1])
         )]
+    # runtime
+    for i in range(0, len(Xed_r)-2, 2):
+        data += [go.Scatter(
+                x=Xed_r[i:i+2],
+                y=Yed_r[i:i+2],
+                mode='lines',
+                opacity=ed_opacity_r[i],
+                legendgroup="rt",
+                showlegend=False,
+                line=dict(color=ed_color_r[i], width=ed_linewidth_r[i])
+        )]
+    if len(Xed_r) > 0:
+        data+=[go.Scatter(
+                x=Xed_r[len(Xed_r)-2:],
+                y=Yed_r[len(Yed_r)-2:],
+                mode='lines',
+                opacity=ed_opacity_r[-1],
+                legendgroup="rt",
+                name="runtime dependency relationships",
+                line=dict(color=ed_color_r[-1], width=ed_linewidth_r[-1])
+        )]
     # add node traces to data
+    Xv_d_symbols = [m.get('marker-symbol') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-symbol') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_d_sizes = [m.get('marker-size') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-size') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_d_colors = [m.get('color') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('color') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_d_linecolors = [m.get('line-color') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-color') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_d_linewidth = [m.get('line-width') for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-width') for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_d_texthover = [m['text-hover'] for x,m in d_G.nodes(data=True) if m.get('type')!='application-root']+[m['text-hover'] for x,m in d_G.nodes(data=True) if m.get('type')=='application-root']
+    if len(Xv_d) > 1:
+        data+=[go.Scatter(x=Xv_d[:-1],
+               y=Yv_d[:-1],
+               mode='markers',
+               legendgroup="dev",
+               name='dependencies required during build (blue ring means direct dependencies)',
+               marker=dict(symbol=Xv_d_symbols[:-1],
+                             size=Xv_d_sizes[:-1],
+                             opacity=1,
+                             color=Xv_d_colors[:-1],
+                             line=dict(color=Xv_d_linecolors[:-1], width=Xv_d_linewidth[:-1]),
+                             ),
+               text=Xv_d_texthover[:-1],
+               hovertemplate='%{text}')]
+    if len(Xv_d) > 0:
+        data += [go.Scatter(
+               x=Xv_d[-1:],
+               y=Yv_d[-1:],
+               mode='markers',
+               legendgroup="dev",
+               name='application in name(version)',
+               marker=dict(symbol=Xv_d_symbols[-1:],
+                             size=Xv_d_sizes[-1:],
+                             opacity=1,
+                             color=Xv_d_colors[-1:],
+                             line=dict(color=Xv_d_linecolors[-1:], width=Xv_d_linewidth[-1:])
+                             ),
+               text=Xv_d_texthover[-1:],
+               hovertemplate='%{text}'
+        )]
+    Xv_r_symbols = [m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_r_sizes = [m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_r_colors = [m.get('color') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('color') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_r_linecolors = [m.get('line-color') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-color') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_r_linewidth = [m.get('line-width') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('line-width') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    Xv_r_texthover = [m['text-hover'] for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m['text-hover'] for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
+    if len(Xv_r) > 1:
+        data += [go.Scatter(x=Xv_r[:-1],
+               y=Yv_r[:-1],
+               mode='markers',
+               legendgroup="rt",        
+               name='dependencies required during use (blue ring means direct dependencies)',       
+               marker=dict(symbol=Xv_r_symbols[:-1],
+                             size=Xv_r_sizes[:-1],
+                             opacity=1,
+                             color=Xv_r_colors[:-1],
+                             line=dict(color=Xv_r_linecolors[:-1], width=Xv_r_linewidth[:-1]),
+                             ),
+               text=Xv_r_texthover[:-1],
+               hovertemplate='%{text}')]
+    # add application node
     if len(Xv_r) > 0:
-        data += [go.Scatter(x=Xv_r,
-               y=Yv_r,
+        data += [go.Scatter(
+               x=Xv_r[-1:],
+               y=Yv_r[-1:],
                mode='markers',
                legendgroup="rt",               
-               name='dependencies required during use (red means vulnerable)',
-               marker=dict(symbol=[m['marker-symbol'] for x,m in r_G.nodes(data=True)],
-                             size=[m['marker-size'] for x,m in r_G.nodes(data=True)],
+               name='application in name(version)',
+               marker=dict(symbol=Xv_r_symbols[-1:],
+                             size=Xv_r_sizes[-1:],
                              opacity=1,
-                             color=[m['color'] for x,m in r_G.nodes(data=True)],
-                             line=dict(color=[m['color'] for x,m in r_G.nodes(data=True)], width=[m['line-width'] for x,m in r_G.nodes(data=True)])
+                             color=Xv_r_colors[-1:],
+                             line=dict(color=Xv_r_linecolors[-1:], width=Xv_r_linewidth[-1:])
                              ),
-               text=[m['text-hover'] for x,m in r_G.nodes(data=True)],
-               hovertemplate='%{text}',
-               hoverlabel=dict(bgcolor='#3c3c3c', 
-                                font=dict(color='white'))
-               )]
-    if len(Xv_d) > 0:
-        data+=[go.Scatter(x=Xv_d,
-               y=Yv_d,
-               mode='markers',
-               legendgroup="dev",               
-               name='dependencies required during build (red means vulnerable)',
-               marker=dict(symbol=[m['marker-symbol'] for x,m in d_G.nodes(data=True)],
-                             size=[m['marker-size'] for x,m in d_G.nodes(data=True)],
-                             opacity=1,
-                             color=[m['color'] for x,m in d_G.nodes(data=True)],
-                             line=dict(color=[m['color'] for x,m in d_G.nodes(data=True)], width=[m['line-width'] for x,m in d_G.nodes(data=True)])
-                             ),
-               text=[m['text-hover'] for x,m in d_G.nodes(data=True)],
-               hovertemplate='%{text}',
-               hoverlabel=dict(bgcolor='#3c3c3c', 
-                                font=dict(color='white'))
-               )]
+               text=Xv_r_texthover[-1:],
+               hovertemplate='%{text}'
+        )]
     # create
     fig=go.Figure(data=data)
     # update layout
@@ -768,6 +808,7 @@ def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
         paper_bgcolor='white',
         plot_bgcolor='white'
     )
+
     # add annotations
     for n,m in r_G.nodes(data=True):
         if m.get('text-label'):
@@ -800,12 +841,12 @@ def create_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dic
                     size=20,
                     color="#3c3c3c"))
     # update graph scale
-    x_pos_list = [v[0] for v in pos.values()]
-    y_pos_list = [v[1] for v in pos.values()]
-    xoffset = (max(x_pos_list) - min(x_pos_list)) * 0.05
-    yoffset = (max(y_pos_list) - min(y_pos_list)) * 0.05
-    fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
-    fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
+    # x_pos_list = [v[0] for v in pos.values()]
+    # y_pos_list = [v[1] for v in pos.values()]
+    # xoffset = (max(x_pos_list) - min(x_pos_list)) * 0.05
+    # yoffset = (max(y_pos_list) - min(y_pos_list)) * 0.05
+    # fig.update_xaxes(range=[min(x_pos_list)-xoffset, max(x_pos_list)+xoffset])
+    # fig.update_yaxes(range=[min(y_pos_list)-yoffset, max(y_pos_list)+yoffset])
     
     if img_out:
         print(f'exporting REM dependency graph to {img_out}.')

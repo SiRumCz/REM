@@ -102,7 +102,7 @@ def create_ripple_effect_subgraph(G, packages) -> nx.DiGraph:
            ripple_effect_nodes.update(path)
     sub_G = G.subgraph(list(ripple_effect_nodes)).copy()
     nx.set_node_attributes(sub_G, False, 'ripple')
-    nx.set_edge_attributes(sub_G, '#8b0000', 'color')
+    # nx.set_edge_attributes(sub_G, '#8b0000', 'color')
     for p in packages:
         p_nodename = name_table.get(p)
         if p_nodename:
@@ -129,8 +129,8 @@ def assign_node_attrs(G: nx.DiGraph):
     """
     this part is hardcoded
     adding attributes:
-     - text-label
-     - text-hover
+     - text-label: text that are going to be used as label
+     - text-hover: text that are going to be used as hover message
      - marker-size: node size
      - color: node color
      - marker-symbol: marker symbol
@@ -460,7 +460,7 @@ def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highligh
     html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
     img_out_link = join(REM_DEPENDABOT_IMG_URL, img_outfile)
     # create graph files
-    create_deepndabot_issue_rem_graph(r_G=runtime_G, d_G=development_G, pos=pos, metric=highlight_metric,
+    draw_dependabot_issue_rem_graph(r_G=runtime_G, d_G=development_G, pos=pos, metric=highlight_metric,
         title=f'Ripple-Effect of Health Metric Graph of {root}', html_out=html_out_path, img_out=img_out_path)
     return (img_out_link, html_out_link)
 
@@ -474,15 +474,43 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
     G = create_from_lockfile_and_package_json(package_json, lockfile)
     # create a ripple-effect of metrics subgraph
     rem_sub_G = create_ripple_effect_subgraph(G, packages)
-    runtime_rem_sub_G, development_rem_sub_G = split_G_by_dependency_type(rem_sub_G)
-    # assign attrs to be sent to plotly
-    assign_edge_attrs(runtime_rem_sub_G, {'line-width':0.8, 'opacity':1})
-    assign_edge_attrs(development_rem_sub_G, {'line-width':3.2, 'opacity':0.7})
-    assign_node_attrs(runtime_rem_sub_G)
-    assign_node_attrs(development_rem_sub_G)
     # prepare graph layout
     root = [x for x,m in rem_sub_G.nodes(data=True) if m.get('type') == 'application-root'][0]
     pos = nx.nx_pydot.graphviz_layout(G=rem_sub_G, prog='dot', root=root)
+    # split by types
+    runtime_rem_sub_G, development_rem_sub_G = split_G_by_dependency_type(rem_sub_G)
+    # assign attrs to be sent to plotly
+    assign_edge_attrs(runtime_rem_sub_G, {'line-width':0.8, 'opacity':0.8, 'color':'#688aa8'})
+    assign_edge_attrs(development_rem_sub_G, {'line-width':2.4, 'opacity':0.8, 'color':'#c4c7ca'})
+    # assign some basic plotly attrs
+    neighbors = list(runtime_rem_sub_G.neighbors(root)) if runtime_rem_sub_G.has_node(root) else [] # direct dependencies
+    # assign
+    data = {
+        decrypt_nodename(n)[0]: {
+        'color'         : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey'),
+        'line-color'    : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey') if n not in neighbors else '#5077BE',
+        'marker-size'   : 17 if n in neighbors or m.get('ripple') else 10, 
+        'marker-symbol' : 'circle', 
+        'line-width'    : 3 if n in neighbors else 1,
+        'text-hover'    : dependabot_issue_hoverlabel(node=(n,m),key=None,out_list=['version']),
+        'text-label'    : decrypt_nodename(n)[0] if m.get('type') == 'application-root' or m.get('ripple') else None
+        } for n,m in runtime_rem_sub_G.nodes(data=True)
+    }
+    assign_node_attrs_by_data(runtime_rem_sub_G, data)
+    neighbors = list(development_rem_sub_G.neighbors(root)) if development_rem_sub_G.has_node(root) else []# direct dependencies
+    # assign
+    data = {
+        decrypt_nodename(n)[0]: {
+        'color'         : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey'),
+        'line-color'    : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey') if n not in neighbors else '#5077BE',
+        'marker-size'   : 17 if n in neighbors or m.get('ripple') else 10, 
+        'marker-symbol' : 'circle', 
+        'line-width'    : 3 if n in neighbors or m.get('ripple') else 1,
+        'text-hover'    : dependabot_issue_hoverlabel(node=(n,m),key=None,out_list=['version']),
+        'text-label'    : decrypt_nodename(n)[0] if m.get('type') == 'application-root' or m.get('ripple') else None
+        } for n,m in development_rem_sub_G.nodes(data=True)
+    }
+    assign_node_attrs_by_data(development_rem_sub_G, data)
     # prepare output files and links
     uname = str(uuid.uuid1())
     html_outfile = f'{uname}.html'
@@ -492,7 +520,7 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
     html_out_link = join(REM_DEPENDABOT_HTML_URL, html_outfile)
     img_out_link = join(REM_DEPENDABOT_IMG_URL, img_outfile)
     # create graph files
-    create_dependabot_pr_rem_subgraph(r_G=runtime_rem_sub_G, d_G=development_rem_sub_G, pos=pos, 
+    draw_dependabot_pr_rem_subgraph(r_G=runtime_rem_sub_G, d_G=development_rem_sub_G, pos=pos, 
         title=f'Ripple-Effect of Vulnerability Metric Graph of {root}', html_out=html_out_path, img_out=img_out_path)
     return (img_out_link, html_out_link)
 
@@ -501,8 +529,8 @@ def test_subgraph_on_lockfile():
     """
     test on subgraph using lockfile and package.json
     """
-    lockfile_one = join('D:\\myGithubRepo\\REM\\test', 'lockfiles', 'package-lock.json')
-    package_json_one = join('D:\\myGithubRepo\\REM\\test', 'package_jsons', 'package.json')
+    lockfile_one = join('D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer', 'package-lock.json')
+    package_json_one = join('D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer', 'package.json')
     lockfile = open(lockfile_one, 'r').read()
     package_json_file = open(package_json_one, 'r').read()
     print(create_dependabot_pr_rem_subgraph(['handlebars!4.1.2', 'dot-prop!4.2.0'], package_json_file, lockfile))
