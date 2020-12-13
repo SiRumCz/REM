@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 
 from preprocess import run_preprocess, update_raw_doc_from_api
-from rem_graph_dependabot import create, create_dependabot_pr_rem_subgraph, create_dependabot_issue_rem_graph
+from rem_graph_dependabot import create_dependabot_pr_rem_subgraph, create_dependabot_issue_rem_graph
 
 app = Flask(__name__)
 
