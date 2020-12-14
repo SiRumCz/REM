@@ -741,7 +741,10 @@ def draw_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                              line=dict(color=Xv_d_linecolors[:-1], width=Xv_d_linewidth[:-1]),
                              ),
                text=Xv_d_texthover[:-1],
-               hovertemplate='%{text}')]
+               hovertemplate='%{text}',
+               hoverlabel=dict(bgcolor='#3c3c3c', 
+                                font=dict(color='white'))
+               )]
     if len(Xv_d) > 0:
         data += [go.Scatter(
                x=Xv_d[-1:],
@@ -756,7 +759,9 @@ def draw_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                              line=dict(color=Xv_d_linecolors[-1:], width=Xv_d_linewidth[-1:])
                              ),
                text=Xv_d_texthover[-1:],
-               hovertemplate='%{text}'
+               hovertemplate='%{text}',
+               hoverlabel=dict(bgcolor='#3c3c3c', 
+                                font=dict(color='white'))
         )]
     Xv_r_symbols = [m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_r_sizes = [m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
@@ -777,7 +782,10 @@ def draw_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                              line=dict(color=Xv_r_linecolors[:-1], width=Xv_r_linewidth[:-1]),
                              ),
                text=Xv_r_texthover[:-1],
-               hovertemplate='%{text}')]
+               hovertemplate='%{text}',
+               hoverlabel=dict(bgcolor='#3c3c3c', 
+                                font=dict(color='white'))
+               )]
     # add application node
     if len(Xv_r) > 0:
         data += [go.Scatter(
@@ -793,7 +801,9 @@ def draw_dependabot_pr_rem_subgraph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                              line=dict(color=Xv_r_linecolors[-1:], width=Xv_r_linewidth[-1:])
                              ),
                text=Xv_r_texthover[-1:],
-               hovertemplate='%{text}'
+               hovertemplate='%{text}',
+               hoverlabel=dict(bgcolor='#3c3c3c', 
+                                font=dict(color='white'))
         )]
     # create
     fig=go.Figure(data=data)

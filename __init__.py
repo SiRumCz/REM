@@ -70,8 +70,8 @@ def issue_rem_with_lockfile():
     """
     package_json = request.form.get('package_json')
     lockfile = request.form.get('lockfile')
-    highlight_metric = request.form.get('highlight_metric')
-    issue_link, live_link = create_dependabot_issue_rem_graph(package_json=package_json, lockfile=lockfile, highlight_metric='final')
+    highlight_metric = request.form.get('highlight_metric') if request.form.get('highlight_metric') else 'final'
+    issue_link, live_link = create_dependabot_issue_rem_graph(package_json=package_json, lockfile=lockfile, highlight_metric=highlight_metric)
     return jsonify({'issue_link': issue_link, 'live_link':live_link})
 
 

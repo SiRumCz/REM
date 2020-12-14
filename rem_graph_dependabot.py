@@ -335,7 +335,7 @@ def build_from_lockfile(G: nx.DiGraph, metadata: dict):
         # add encrypted name to distinguish same dependency from different versions paths
         # e.g. "lodash!4.17.11!root->@babel/core"
         dep_nodename = encrypt_nodename(dep_name, dep_metadata.get('version'), breadcrumbs)
-        G.add_node(dep_nodename)
+        G.add_node(dep_nodename, version=dep_metadata.get('version'))
         dep_metadata['name'] = dep_name
         dep_metadata['node_name'] = dep_nodename
         recursive_build_from_lockfile(G, installed_dependencies, dep_metadata, breadcrumbs)
@@ -379,7 +379,7 @@ def recursive_build_from_lockfile(G: nx.DiGraph, installed_dependencies: dict, d
         dep_meta['name'] = dep_name
         # their nodes will be added to graph first
         dep_meta['node_name'] = encrypt_nodename(dep_name, dep_meta.get('version'), curr_breadcrumbs)
-        G.add_node(dep_meta['node_name'])
+        G.add_node(dep_meta['node_name'], version=dep_meta.get('version'))
         recursive_build_from_lockfile(G, installed_dependencies, dep_meta, curr_breadcrumbs)
          
 
@@ -529,11 +529,11 @@ def test_subgraph_on_lockfile():
     """
     test on subgraph using lockfile and package.json
     """
-    lockfile_one = join('D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer', 'package-lock.json')
-    package_json_one = join('D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer', 'package.json')
+    lockfile_one = join('D:\\myGithubRepo\\rem_testrepos\\agalwood-Motrix', 'package-lock.json')
+    package_json_one = join('D:\\myGithubRepo\\rem_testrepos\\agalwood-Motrix', 'package.json')
     lockfile = open(lockfile_one, 'r').read()
     package_json_file = open(package_json_one, 'r').read()
-    print(create_dependabot_pr_rem_subgraph(['handlebars!4.1.2', 'dot-prop!4.2.0'], package_json_file, lockfile))
+    print(create_dependabot_pr_rem_subgraph(['lodash!4.17.15'], package_json_file, lockfile))
 
 
 def test_issue_rem_graph_on_lockfile():
