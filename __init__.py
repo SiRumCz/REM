@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 
 from preprocess import run_preprocess, update_raw_doc_from_api
-from rem_graph_dependabot import create_dependabot_pr_rem_subgraph, create_dependabot_issue_rem_graph
+from rem_graph_dependabot import create_dependabot_pr_rem_subgraph, create_dependabot_issue_rem_graph, create_dependabot_issue_rem_graph_with_ripples
 
 app = Flask(__name__)
 
@@ -72,6 +72,29 @@ def issue_rem_with_lockfile():
     lockfile = request.form.get('lockfile')
     highlight_metric = request.form.get('highlight_metric') if request.form.get('highlight_metric') else 'final'
     issue_link, live_link = create_dependabot_issue_rem_graph(package_json=package_json, lockfile=lockfile, highlight_metric=highlight_metric)
+    return jsonify({'issue_link': issue_link, 'live_link':live_link})
+
+
+@app.route('/rem-with-lockfile-for-issues-v2', methods = ['POST'])
+def issue_rem_with_lockfile_v2():
+    """
+    Creates a Ripple-Effect of Metrics(security advisory) that highlights the dependencies health,
+    that is, a complete dependency graph using a lockfile ('package-lock.json' only)
+    NOTE: npm-shrinkwrap.json is not supported.
+    @params:
+        - package_json: package.json content
+        - lockfile: lockfile content
+        - re_nodes: dependencies that have ripple effect on application
+    @return:
+    {
+        issue_link: http://.../.img,
+        live_link: http://.../.html
+    }
+    """
+    package_json = request.form.get('package_json')
+    lockfile = request.form.get('lockfile')
+    re_nodes = request.form.getlist('re_nodes')
+    issue_link, live_link = create_dependabot_issue_rem_graph_with_ripples(package_json=package_json, lockfile=lockfile, re_nodes=re_nodes)
     return jsonify({'issue_link': issue_link, 'live_link':live_link})
 
 

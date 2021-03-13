@@ -5,11 +5,12 @@ prepared for dependabot Pull Request
 Zhe Chen (zkchen@uvic.ca)
 '''
 import networkx as nx # DiGraph, descendants, all_simple_paths, set_node_attributes, set_edge_attributes
-from os.path import join, isfile # path.join, isfile
+from os.path import join, isfile, exists # path.join, isfile
+import os # os.mkdir
 import json
 import uuid # uuid1
 
-from configs import REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_DEPENDABOT_HTML_URL, REM_DEPENDABOT_IMG_URL
+from configs import REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_DEPENDABOT_HTML_URL, REM_DEPENDABOT_IMG_URL, REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE
 from utils import *
 from rem_filter import *
 from rem_graphics import *
@@ -427,10 +428,13 @@ def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highligh
     health_metrics = fetch_metric_data_from_list_by_db(plist=dependency_list)
     assign_node_attrs_by_data(G, health_metrics)
     # assign version attr
-    data = {decrypt_nodename(n)[0]: {
-        'version': decrypt_nodename(n)[1]
-        } for n,m in G.nodes(data=True) if m.get('type') != 'application-root'}
-    assign_node_attrs_by_data(G, data)
+    # special case where same node can have different versions
+    # assign_node_attrs_by_data() won't work here
+    for node, meta in G.nodes(data=True):
+        if meta.get('type') == 'application-root':
+            continue
+        decrypted = decrypt_nodename(node)
+        G.nodes()[node]['version'] = decrypted[1]
     # assign some basic plotly attrs
     neighbors = list(G.neighbors(root)) # direct dependencies
     data = {
@@ -525,6 +529,163 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
     return (img_out_link, html_out_link)
 
 
+def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: dict, uname: str, re_nodes: list, highlight_metric: str = 'final', output_image: bool = True):
+    '''
+    G: networkx graph model
+    pos: graph layout
+    uname: file unique string identifier
+    re_nodes: ripple effect nodes
+    highlight_metric: metric of health
+    has_image: output image toggle
+    '''
+    root = [x for x,m in G.nodes(data=True) if m.get('type') == 'application-root'][0]
+    # assign some basic plotly attrs
+    neighbors = list(G.neighbors(root)) # direct dependencies
+    data = {
+        decrypt_nodename(n)[0]: {'line-color': 
+        'red' if encrypt_nodename(decrypt_nodename(n)[0], decrypt_nodename(n)[1]) in re_nodes 
+        else '#5077BE' if n in neighbors else 'grey'}
+        for n in G.nodes()
+    }
+    assign_node_attrs_by_data(G, data)
+    data = {decrypt_nodename(n)[0]: {
+        'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
+        'marker-size': 17 if n in neighbors else 10, 
+        'marker-symbol': 'circle', 
+        'line-width': 3 if n in neighbors else 1,
+        'text-hover': dependabot_issue_hoverlabel(node=(n,m), key=highlight_metric, out_list=['version', 'final', 'quality', 'popularity', 'maintenance'])
+        } for n,m in G.nodes(data=True)}
+    assign_node_attrs_by_data(G, data)
+    # separate by type
+    runtime_G, development_G = split_G_by_dependency_type(G)
+    # ripple effect
+    runtime_rippled_edges = set()
+    runtime_rippled_nodes = set()
+    development_rippled_edges = set()
+    development_rippled_nodes = set()
+    for node, meta in runtime_G.nodes(data=True):
+        if meta.get('ripple') is True:
+            paths_list = list(nx.all_simple_paths(runtime_G, source=root, target=node))
+            for path in paths_list:
+                for i in range(len(path)-1):
+                    runtime_rippled_nodes.add(path[i])
+                    runtime_rippled_nodes.add(path[i + 1])
+                    runtime_rippled_edges.add((path[i], path[i + 1]))
+    for node, meta in development_G.nodes(data=True):
+        if meta.get('ripple') is True:
+            paths_list = list(nx.all_simple_paths(development_G, source=root, target=node))
+            for path in paths_list:
+                for i in range(len(path)-1):
+                    development_rippled_nodes.add(path[i])
+                    development_rippled_nodes.add(path[i + 1])
+                    development_rippled_edges.add((path[i], path[i + 1]))
+    # filterings
+    filtered_runtime_G = filter_post_order_minimum(G=runtime_G, ripples=runtime_rippled_edges, root=root, keyword=highlight_metric)
+    for u,v,m in filtered_runtime_G.edges(data=True):
+            if 'development' in m:
+                del m['development']
+    filtered_development_G = filter_post_order_minimum(G=development_G, ripples=development_rippled_edges, root=root, keyword=highlight_metric)
+    for u,v,m in filtered_development_G.edges(data=True):
+            if 'runtime' in m:
+                del m['runtime']
+    filtered_G = nx.compose(filtered_runtime_G, filtered_development_G)
+    gray_out_non_problematics(G=filtered_G, root=root, keyword=highlight_metric, re_metric='ripple')
+    # adjust ripple effect node 'marker-symbol' and 'color'/'line-color'
+    for node in filtered_G:
+        if filtered_G.nodes()[node].get('type') == 'application-root':
+            continue
+        if filtered_G.nodes()[node].get('non_problematic'):
+            # line-color -> color, color -> white
+            filtered_G.nodes()[node]['line-color'] = filtered_G.nodes()[node].get('color')
+            filtered_G.nodes()[node]['color'] = 'white'
+    for node in G:
+        if encrypt_nodename(decrypt_nodename(node)[0], decrypt_nodename(node)[1]) in re_nodes:
+            full_size = len(list(G.neighbors(node)))
+            filtered_size = len(list(filtered_G.neighbors(node)))
+            if filtered_size < full_size:
+                filtered_G.nodes()[node]['marker-symbol'] = 'circle-cross'
+    # split filtered graphs
+    filtered_runtime_G, filtered_development_G = split_G_by_dependency_type(filtered_G)
+    # assign attrs to edges
+    assign_edge_attrs(runtime_G, {'line-width':0.8, 'opacity':0.8, 'color':'#688aa8'})
+    assign_edge_attrs(development_G, {'line-width':2.4, 'opacity':0.8, 'color':'#c4c7ca'})
+    assign_edge_attrs(filtered_runtime_G, {'line-width':0.8, 'opacity':0.8, 'color':'#688aa8'})
+    assign_edge_attrs(filtered_development_G, {'line-width':2.4, 'opacity':0.8, 'color':'#c4c7ca'})
+    # adjust ripple effect edge 'color'
+    for pair in filtered_runtime_G.edges():
+        if pair in runtime_rippled_edges:
+            filtered_runtime_G.edges()[pair]['color'] = '#8b0000'
+    for pair in filtered_development_G.edges():
+        if pair in development_rippled_edges:
+            filtered_development_G.edges()[pair]['color'] = '#8b0000'        
+    # generate out files
+    # image and html links
+    html_full_outfile = f'{uname}_{highlight_metric}.html'
+    html_filtered_outfile = f'{uname}_{highlight_metric}_min.html'
+    img_outfile = f'{uname}.png'
+    html_folder = join(REM_DEPENDABOT_HTML_OUTDIR, uname)
+    if not exists(html_folder):
+        os.mkdir(html_folder)
+    html_full_out_path = join(html_folder, html_full_outfile)
+    html_filtered_out_path = join(html_folder, html_filtered_outfile)
+    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile)
+    # create graph files
+    draw_dependabot_issue_rem_graph(r_G=runtime_G, d_G=development_G, pos=pos, metric=highlight_metric,
+        title=f'Ripple-Effect of Health Metric Graph of {root}', html_out=html_full_out_path, img_out=img_out_path)
+    draw_dependabot_issue_rem_graph(r_G=filtered_runtime_G, d_G=filtered_development_G, pos=pos, metric=highlight_metric,
+        title=f'Filtered Ripple-Effect of Health Metric Graph of {root}', html_out=html_filtered_out_path)
+
+
+def create_dependabot_issue_rem_graph_with_ripples(package_json: str, lockfile: str, re_nodes: list) -> tuple:
+    """
+    create a rem graph that contains a complete dependency graph and metrics of health
+    re_nodes: ['dep!version', ...]
+    """
+    # create a full dependency graph
+    G = create_from_lockfile_and_package_json(package_json, lockfile)
+    # generate graph layout
+    root = [x for x,m in G.nodes(data=True) if m.get('type') == 'application-root'][0]
+    pos = nx.nx_pydot.graphviz_layout(G=G, prog='dot', root=root)
+    # fetch health metrics from database and add to graph
+    dependency_list = {decrypt_nodename(n)[0] for n,m in G.nodes(data=True) if m.get('type') != 'application-root'}
+    health_metrics = fetch_metric_data_from_list_by_db(plist=dependency_list)
+    assign_node_attrs_by_data(G, health_metrics)
+    # assign version attr
+    # special case where same node can have different versions
+    # assign_node_attrs_by_data() won't work here
+    for node, meta in G.nodes(data=True):
+        G.nodes()[node]['ripple'] = False
+        if meta.get('type') == 'application-root':
+            continue
+        decrypted = decrypt_nodename(node)
+        G.nodes()[node]['version'] = decrypted[1]
+        if encrypt_nodename(decrypted[0], decrypted[1]) in re_nodes:
+            G.nodes()[node]['ripple'] = True
+    # unique file string
+    uname = str(uuid.uuid1())
+    html_folder = join(REM_DEPENDABOT_HTML_OUTDIR, uname)
+    if not exists(html_folder):
+        os.mkdir(html_folder)
+    for metric in ['final', 'quality', 'popularity', 'maintenance']:
+        create_dependabot_issue_rem_graph_with_ripples_helper(G=G.copy(), pos=pos, uname=uname, re_nodes=re_nodes, highlight_metric=metric, output_image=(metric=='final'))
+    # write index files
+    f = open(REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE, 'r')
+    index_tmpl = f.read()
+    f.close()
+    # replace with data
+    for metric in ['final', 'quality', 'popularity', 'maintenance']:
+        index_tmpl = index_tmpl.replace(f'{{{{{metric}_full}}}}', join(html_folder, f'{uname}_{metric}.html'))
+        index_tmpl = index_tmpl.replace(f'{{{{{metric}_min}}}}', join(html_folder, f'{uname}_{metric}_min.html'))
+    f = open(join(html_folder, 'index.html'), 'w')
+    f.write(index_tmpl)
+    f.close()
+    # img_out_link: full REM graph using final metric
+    img_out_link = join(REM_DEPENDABOT_IMG_URL, f'{uname}.png')
+    # html_out_link: html containing all 8 graphs folder/uname/index.html
+    html_out_link = join(REM_DEPENDABOT_HTML_URL, uname, 'index.html')
+    return (img_out_link, html_out_link)
+
+
 def test_subgraph_on_lockfile():
     """
     test on subgraph using lockfile and package.json
@@ -533,7 +694,7 @@ def test_subgraph_on_lockfile():
     package_json_one = join('D:\\myGithubRepo\\rem_testrepos\\agalwood-Motrix', 'package.json')
     lockfile = open(lockfile_one, 'r').read()
     package_json_file = open(package_json_one, 'r').read()
-    print(create_dependabot_pr_rem_subgraph(['lodash!4.17.15'], package_json_file, lockfile))
+    print(create_dependabot_pr_rem_subgraph(['lodash!4.17.15', 'highlight.js!9.18.1'], package_json_file, lockfile))
 
 
 def test_issue_rem_graph_on_lockfile():
@@ -555,6 +716,26 @@ def test_issue_rem_graph_on_lockfile():
             lockfile=lockfile, highlight_metric='final'))
 
 
+def test_issue_rem_graph_on_lockfile_with_ripples():
+    """
+    test on full rem graph using lockfile and package.json
+    """
+    test_locs = [
+        # 'D:\\myGithubRepo\\rem_testrepos\\agalwood-Motrix',
+        'D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer',
+        # 'D:\\myGithubRepo\\rem_testrepos\\DustinBrett-x'
+    ]
+
+    for test in test_locs:
+        lockfile_loc = join(test, 'package-lock.json')
+        package_json_loc = join(test, 'package.json')
+        lockfile = open(lockfile_loc, 'r').read()
+        package_json = open(package_json_loc, 'r').read()
+        print(create_dependabot_issue_rem_graph_with_ripples(package_json=package_json, 
+            lockfile=lockfile, re_nodes=['axios!0.19.0','debug!2.6.9','ini!1.3.5', 'tar!2.2.2']))
+
+
 if __name__ == '__main__':
-    test_subgraph_on_lockfile()
+    # test_subgraph_on_lockfile()
     # test_issue_rem_graph_on_lockfile()
+    test_issue_rem_graph_on_lockfile_with_ripples()

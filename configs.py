@@ -16,5 +16,9 @@ FILTER_ENABLE=True
 # rem settings for security advisory dependabot
 REM_DEPENDABOT_HTML_URL='http://helium.cs.uvic.ca/rem/live-view'
 REM_DEPENDABOT_IMG_URL='http://helium.cs.uvic.ca/rem/images'
-REM_DEPENDABOT_HTML_OUTDIR='/var/www/FlaskApp/REM/live-view'
-REM_DEPENDABOT_IMG_OUTDIR='/var/www/FlaskApp/REM/images'
+# REM_DEPENDABOT_HTML_OUTDIR='/var/www/FlaskApp/REM/live-view'
+# REM_DEPENDABOT_IMG_OUTDIR='/var/www/FlaskApp/REM/images'
+# REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE='/var/www/FlaskApp/REM/index_html.tmpl'
+REM_DEPENDABOT_HTML_OUTDIR='live-view'
+REM_DEPENDABOT_IMG_OUTDIR='images'
+REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE='index_html.tmpl'

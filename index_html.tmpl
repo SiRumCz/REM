@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>REM</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link href="../favicon.png" rel="shortcut icon" type="image/x-icon" />
+  <script src="../jquery-3.5.1.min.js"></script>
+  <script>
+    function loadIframe(url) {
+      $("#graph-frame").attr('src',url);
+      return false;
+    }
+  </script>
+</head>
+<body>
+
+<ul>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Popularity</a>
+    <div class="dropdown-content">
+      <a href="{{popularity_full}}" onclick="return loadIframe(this.href);">Full REM Graph</a>
+      <a href="{{popularity_min}}" onclick="return loadIframe(this.href);">Filtered REM Graph</a>
+    </div>
+  </li>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Quality</a>
+    <div class="dropdown-content">
+      <a href="{{quality_full}}" onclick="return loadIframe(this.href);">Full REM Graph</a>
+      <a href="{{quality_min}}" onclick="return loadIframe(this.href);">Filtered REM Graph</a>
+    </div>
+  </li>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Maintenance</a>
+    <div class="dropdown-content">
+      <a href="{{maintenance_full}}" onclick="return loadIframe(this.href);">Full REM Graph</a>
+      <a href="{{maintenance_min}}" onclick="return loadIframe(this.href);">Filtered REM Graph</a>
+    </div>
+  </li>
+  <li class="dropdown">
+    <a href="javascript:void(0)" class="dropbtn">Final</a>
+    <div class="dropdown-content">
+      <a href="{{final_full}}" onclick="return loadIframe(this.href);">Full REM Graph</a>
+      <a href="{{final_min}}" onclick="return loadIframe(this.href);">Filtered REM Graph</a>
+    </div>
+  </li>
+
+  <li style="float:right"><a class="active" href="https://github.com/SiRumCz/REM/tree/dependabot_rem" target="_blank">created by REM</a></li>
+</ul>
+
+<div class="graph-container">
+  <iframe id="graph-frame" src="{{final_full}}" class="graph" frameborder="0"></iframe>
+</div>
+
+</body>
+</html>

@@ -104,8 +104,7 @@ def filter_post_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str
             continue
         visited[name] = True
         meta = temp_G.nodes()[name]
-        if is_valid_key(meta, 'type') \
-        and meta['type'] == 'GITHUB':
+        if meta.get('type') == 'GITHUB' or meta.get('type') == 'application-root':
             continue
         # score = meta[keyword] if keyword in meta else None
         score = minimum[name]
@@ -165,7 +164,7 @@ def gray_out_non_problematics(G: nx.Graph, root: str, keyword: str, re_metric: s
     '''
     dir_dependencies = list(G.neighbors(root))
     for node in G.nodes():
-        if is_valid_key(G.nodes()[node], re_metric) and G.nodes()[node][re_metric] == True:
+        if G.nodes()[node].get(re_metric) == True:
             continue
         if (node in dir_dependencies+[root]):
             continue
