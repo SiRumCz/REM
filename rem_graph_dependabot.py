@@ -681,8 +681,8 @@ def create_dependabot_issue_rem_graph_with_ripples(package_json: str, lockfile: 
     f.close()
     # replace with data
     for metric in ['final', 'quality', 'popularity', 'maintenance']:
-        index_tmpl = index_tmpl.replace(f'{{{{{metric}_full}}}}', join(html_folder, f'{uname}_{metric}.html'))
-        index_tmpl = index_tmpl.replace(f'{{{{{metric}_min}}}}', join(html_folder, f'{uname}_{metric}_min.html'))
+        index_tmpl = index_tmpl.replace(f'{{{{{metric}_full}}}}', f'{uname}_{metric}.html')
+        index_tmpl = index_tmpl.replace(f'{{{{{metric}_min}}}}', f'{uname}_{metric}_min.html')
     f = open(join(html_folder, 'index.html'), 'w')
     f.write(index_tmpl)
     f.close()
