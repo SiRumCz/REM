@@ -45,7 +45,7 @@ def pr_rem_vulnerable_with_lockfile():
         live_link: http://.../.html
     }
     """
-    packages = request.form.getlist('packages')
+    packages = request.form.getlist('packages[]')
     package_json = request.form['package_json']
     lockfile = request.form['lockfile']
     pr_link, live_link = create_dependabot_pr_rem_subgraph(packages=packages, package_json=package_json, lockfile=lockfile)
@@ -93,7 +93,7 @@ def issue_rem_with_lockfile_v2():
     """
     package_json = request.form.get('package_json')
     lockfile = request.form.get('lockfile')
-    re_nodes = request.form.getlist('re_nodes')
+    re_nodes = request.form.getlist('re_nodes[]')
     issue_link, live_link = create_dependabot_issue_rem_graph_with_ripples(package_json=package_json, lockfile=lockfile, re_nodes=re_nodes)
     return jsonify({'issue_link': issue_link, 'live_link':live_link})
 

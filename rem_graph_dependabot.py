@@ -546,9 +546,6 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
         for n in G.nodes()
     }
     assign_node_attrs_by_data(G, data)
-    for node in G:
-        if G.nodes()[node].get('ripple'):
-            G.nodes()[node]['line-color'] = 'red'
     data = {decrypt_nodename(n)[0]: {
         'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
         'marker-size': 17 if n in neighbors else 10, 
@@ -557,6 +554,11 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
         'text-hover': dependabot_issue_hoverlabel(node=(n,m), key=highlight_metric, out_list=['version', 'final', 'quality', 'popularity', 'maintenance'])
         } for n,m in G.nodes(data=True)}
     assign_node_attrs_by_data(G, data)
+    # adjust ripple effect node 
+    for node in G:
+        if G.nodes()[node].get('ripple'):
+            G.nodes()[node]['line-color'] = 'red'
+            G.nodes()[node]['line-width'] = '3'
     # separate by type
     runtime_G, development_G = split_G_by_dependency_type(G)
     # ripple effect
@@ -591,7 +593,7 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
                 del m['runtime']
     filtered_G = nx.compose(filtered_runtime_G, filtered_development_G)
     gray_out_non_problematics(G=filtered_G, root=root, keyword=highlight_metric, re_metric='ripple')
-    # adjust ripple effect node 'marker-symbol' and 'color'/'line-color'
+    # adjust filtered node 'marker-symbol' and 'color'/'line-color'
     for node in filtered_G:
         if filtered_G.nodes()[node].get('type') == 'application-root':
             continue
