@@ -558,7 +558,7 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
     for node in G:
         if G.nodes()[node].get('ripple'):
             G.nodes()[node]['line-color'] = 'red'
-            G.nodes()[node]['line-width'] = '3'
+            G.nodes()[node]['line-width'] = 3
     # separate by type
     runtime_G, development_G = split_G_by_dependency_type(G)
     # ripple effect
