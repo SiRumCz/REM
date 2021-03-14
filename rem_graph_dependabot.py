@@ -542,12 +542,13 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
     # assign some basic plotly attrs
     neighbors = list(G.neighbors(root)) # direct dependencies
     data = {
-        decrypt_nodename(n)[0]: {'line-color': 
-        'red' if encrypt_nodename(decrypt_nodename(n)[0], decrypt_nodename(n)[1]) in re_nodes 
-        else '#5077BE' if n in neighbors else 'grey'}
+        decrypt_nodename(n)[0]: {'line-color': '#5077BE' if n in neighbors else 'grey'}
         for n in G.nodes()
     }
     assign_node_attrs_by_data(G, data)
+    for node in G:
+        if G.nodes()[node].get('ripple'):
+            G.nodes()[node]['line-color'] = 'red'
     data = {decrypt_nodename(n)[0]: {
         'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
         'marker-size': 17 if n in neighbors else 10, 
@@ -599,7 +600,9 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
             filtered_G.nodes()[node]['line-color'] = filtered_G.nodes()[node].get('color')
             filtered_G.nodes()[node]['color'] = 'white'
     for node in G:
-        if encrypt_nodename(decrypt_nodename(node)[0], decrypt_nodename(node)[1]) in re_nodes:
+        if len(decrypt_nodename(node)) < 2:
+            continue
+        if node in filtered_G:
             full_size = len(list(G.neighbors(node)))
             filtered_size = len(list(filtered_G.neighbors(node)))
             if filtered_size < full_size:
@@ -612,12 +615,16 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
     assign_edge_attrs(filtered_runtime_G, {'line-width':0.8, 'opacity':0.8, 'color':'#688aa8'})
     assign_edge_attrs(filtered_development_G, {'line-width':2.4, 'opacity':0.8, 'color':'#c4c7ca'})
     # adjust ripple effect edge 'color'
-    for pair in filtered_runtime_G.edges():
-        if pair in runtime_rippled_edges:
+    for pair in runtime_rippled_edges:
+        if filtered_runtime_G.has_edge(pair[0], pair[1]):
             filtered_runtime_G.edges()[pair]['color'] = '#8b0000'
-    for pair in filtered_development_G.edges():
-        if pair in development_rippled_edges:
-            filtered_development_G.edges()[pair]['color'] = '#8b0000'        
+        if runtime_G.has_edge(pair[0], pair[1]):
+            runtime_G.edges()[pair]['color'] = '#8b0000'
+    for pair in development_rippled_edges:
+        if filtered_development_G.has_edge(pair[0], pair[1]):
+            filtered_development_G.edges()[pair]['color'] = '#8b0000'
+        if development_G.has_edge(pair[0], pair[1]):
+            development_G.edges()[pair]['color'] = '#8b0000'  
     # generate out files
     # image and html links
     html_full_outfile = f'{uname}_{highlight_metric}.html'
@@ -628,7 +635,7 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
         os.mkdir(html_folder)
     html_full_out_path = join(html_folder, html_full_outfile)
     html_filtered_out_path = join(html_folder, html_filtered_outfile)
-    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile)
+    img_out_path = join(REM_DEPENDABOT_IMG_OUTDIR, img_outfile) if output_image else None
     # create graph files
     draw_dependabot_issue_rem_graph(r_G=runtime_G, d_G=development_G, pos=pos, metric=highlight_metric,
         title=f'Ripple-Effect of Health Metric Graph of {root}', html_out=html_full_out_path, img_out=img_out_path)
@@ -648,7 +655,7 @@ def create_dependabot_issue_rem_graph_with_ripples(package_json: str, lockfile: 
     pos = nx.nx_pydot.graphviz_layout(G=G, prog='dot', root=root)
     # fetch health metrics from database and add to graph
     dependency_list = {decrypt_nodename(n)[0] for n,m in G.nodes(data=True) if m.get('type') != 'application-root'}
-    health_metrics = fetch_metric_data_from_list_by_db(plist=dependency_list)
+    health_metrics = fast_fetch_metric_data_from_list_by_db(plist=dependency_list)
     assign_node_attrs_by_data(G, health_metrics)
     # assign version attr
     # special case where same node can have different versions
@@ -722,7 +729,7 @@ def test_issue_rem_graph_on_lockfile_with_ripples():
     """
     test_locs = [
         # 'D:\\myGithubRepo\\rem_testrepos\\agalwood-Motrix',
-        'D:\\myGithubRepo\\rem_testrepos\\algorithm-visualizer',
+        '../rem_testrepos/algorithm-visualizer',
         # 'D:\\myGithubRepo\\rem_testrepos\\DustinBrett-x'
     ]
 

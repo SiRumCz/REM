@@ -92,6 +92,8 @@ def filter_post_order_minimum(G: nx.Graph, ripples: set, root: str, keyword: str
     -> 
     filter by removing edge with minimum
     '''
+    if G.number_of_nodes() == 0:
+        return G
     temp_G = G.copy() # copy of original graph
     minimum = {}
     minimum_in_subgraph_rec(minimum, G.copy(), root, keyword) # minumum metric in each subgraph

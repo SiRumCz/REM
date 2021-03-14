@@ -226,7 +226,7 @@ def plain_plotly_graph_to_html(G: nx.Graph, pname: str, pos: dict, title: str = 
 
 def plotly_save_to_local_img(fig, path):
     with open(path, "wb") as f:
-        f.write(scope.transform(fig, format="png", width=1500, height=750, scale=0.7))
+        f.write(scope.transform(fig, format="png", width=2100, height=1000, scale=0.7))
 
 
 def plotly_graph_to_html(G: nx.Graph, pos: dict, title: str = '', key: str = 'final', outfile: str = 'temp.html', out_img: str = None, re_metric: str = None):

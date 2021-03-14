@@ -60,6 +60,41 @@ def retrieve_package_json_deps(owner, repo, branch) -> tuple:
         return (None, None)
 
 
+def fast_fetch_metric_data_from_list_by_db(plist) -> dict:
+    """
+    fetch metric data for a given list of packages using prefetched database
+    """
+    if not plist:
+        return {}
+    try:
+        conn = sqlite3.connect(NPMDB)
+    except:
+        print('failed to connect database')
+        return {}
+    c = conn.cursor()
+    npm_search_score_query_2 = "SELECT name, final, popularity, quality, maintenance FROM scores"
+    c.execute(npm_search_score_query_2)
+    data = c.fetchall()
+    result = {
+        name: { x: None for x in ['final', 'popularity', 'quality', 'maintenance'] }
+        for name in plist
+    }
+    for row in data:
+        name, final, popularity, quality, maintenance = row
+        if name in result:
+            if final:
+                result[name]['final'] = round(final, 2)
+            if popularity:
+                result[name]['popularity'] = round(popularity, 2)
+            if quality:
+                result[name]['quality'] = round(quality, 2)
+            if maintenance:
+                result[name]['maintenance'] = round(maintenance, 2)
+    if conn:
+        conn.close()
+    return result
+
+
 def fetch_metric_data_from_list_by_db(plist) -> dict:
     """
     fetch metric data for a given list of packages using prefetched database
