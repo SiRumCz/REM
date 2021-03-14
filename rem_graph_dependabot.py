@@ -162,6 +162,19 @@ def assign_node_attrs(G: nx.DiGraph):
                 G.nodes()[n]['color'] = 'red'
 
 
+def assign_data_to_node_attrs(G:nx.DiGraph, data:dict):
+    if not data:
+        return
+    for key, val in data.items():
+        if key not in G:
+            # this should not happen
+            current_app.logger.debug(f'key {key} not found -- line {get_linenumber()}')
+            print(key)
+            continue
+        for attr_name, attr_val in val.items():
+            G.nodes()[key][attr_name] = attr_val
+
+
 def assign_node_attrs_by_data(G:nx.DiGraph, data:dict):
     """
     add items in data as attributes to each node in graph G
@@ -416,6 +429,7 @@ def create_from_lockfile_and_package_json(package_json: str, lockfile: str) -> n
 
 def create_dependabot_issue_rem_graph(package_json: str, lockfile: str, highlight_metric:str='final') -> tuple:
     """
+    **DEPRECATED**
     create a rem graph that contains a complete dependency graph and metrics of health
     """
     # create a full dependency graph
@@ -490,7 +504,7 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
     neighbors = list(runtime_rem_sub_G.neighbors(root)) if runtime_rem_sub_G.has_node(root) else [] # direct dependencies
     # assign
     data = {
-        decrypt_nodename(n)[0]: {
+        n: {
         'color'         : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey'),
         'line-color'    : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey') if n not in neighbors else '#5077BE',
         'marker-size'   : 17 if n in neighbors or m.get('ripple') else 10, 
@@ -500,11 +514,11 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
         'text-label'    : decrypt_nodename(n)[0] if m.get('type') == 'application-root' or m.get('ripple') else None
         } for n,m in runtime_rem_sub_G.nodes(data=True)
     }
-    assign_node_attrs_by_data(runtime_rem_sub_G, data)
+    assign_data_to_node_attrs(runtime_rem_sub_G, data)
     neighbors = list(development_rem_sub_G.neighbors(root)) if development_rem_sub_G.has_node(root) else []# direct dependencies
     # assign
     data = {
-        decrypt_nodename(n)[0]: {
+        n: {
         'color'         : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey'),
         'line-color'    : '#6959CD' if m.get('type') == 'application-root' else ('red' if m.get('ripple') else 'grey') if n not in neighbors else '#5077BE',
         'marker-size'   : 17 if n in neighbors or m.get('ripple') else 10, 
@@ -514,7 +528,7 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
         'text-label'    : decrypt_nodename(n)[0] if m.get('type') == 'application-root' or m.get('ripple') else None
         } for n,m in development_rem_sub_G.nodes(data=True)
     }
-    assign_node_attrs_by_data(development_rem_sub_G, data)
+    assign_data_to_node_attrs(development_rem_sub_G, data)
     # prepare output files and links
     uname = str(uuid.uuid1())
     html_outfile = f'{uname}.html'
@@ -541,24 +555,15 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
     root = [x for x,m in G.nodes(data=True) if m.get('type') == 'application-root'][0]
     # assign some basic plotly attrs
     neighbors = list(G.neighbors(root)) # direct dependencies
-    data = {
-        decrypt_nodename(n)[0]: {'line-color': '#5077BE' if n in neighbors else 'grey'}
-        for n in G.nodes()
-    }
-    assign_node_attrs_by_data(G, data)
-    data = {decrypt_nodename(n)[0]: {
+    data = {n: {
+        'line-color': 'red' if m.get('ripple') else '#5077BE' if n in neighbors else 'grey',
         'color': set_node_color_by_scores(node=(n,m), key=highlight_metric),
         'marker-size': 17 if n in neighbors else 10, 
         'marker-symbol': 'circle', 
-        'line-width': 3 if n in neighbors else 1,
+        'line-width': 3 if n in neighbors or m.get('ripple') else 1,
         'text-hover': dependabot_issue_hoverlabel(node=(n,m), key=highlight_metric, out_list=['version', 'final', 'quality', 'popularity', 'maintenance'])
         } for n,m in G.nodes(data=True)}
-    assign_node_attrs_by_data(G, data)
-    # adjust ripple effect node 
-    for node in G:
-        if G.nodes()[node].get('ripple'):
-            G.nodes()[node]['line-color'] = 'red'
-            G.nodes()[node]['line-width'] = 3
+    assign_data_to_node_attrs(G, data)
     # separate by type
     runtime_G, development_G = split_G_by_dependency_type(G)
     # ripple effect
