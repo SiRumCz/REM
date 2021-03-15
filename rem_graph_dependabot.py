@@ -9,6 +9,8 @@ from os.path import join, isfile, exists # path.join, isfile
 import os # os.mkdir
 import json
 import uuid # uuid1
+import time
+from threading import Thread
 
 from configs import REM_DEPENDABOT_HTML_OUTDIR, REM_DEPENDABOT_IMG_OUTDIR, REM_DEPENDABOT_HTML_URL, REM_DEPENDABOT_IMG_URL, REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE
 from utils import *
@@ -543,7 +545,7 @@ def create_dependabot_pr_rem_subgraph(packages: list, package_json: str, lockfil
     return (img_out_link, html_out_link)
 
 
-def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: dict, uname: str, re_nodes: list, highlight_metric: str = 'final', output_image: bool = True):
+def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: dict, uname: str, highlight_metric: str = 'final', output_image: bool = True):
     '''
     G: networkx graph model
     pos: graph layout
@@ -650,6 +652,21 @@ def create_dependabot_issue_rem_graph_with_ripples_helper(G: nx.DiGraph, pos: di
         title=f'Filtered Ripple-Effect of Health Metric Graph of {root}', html_out=html_filtered_out_path)
 
 
+class Compute(Thread):
+    def __init__(self, G, pos, uname):
+        Thread.__init__(self)
+        self.G = G
+        self.pos = pos
+        self.uname = uname
+
+    def run(self):
+        print("start")
+        for metric in ['quality', 'popularity', 'maintenance']:
+            create_dependabot_issue_rem_graph_with_ripples_helper(G=self.G.copy(), pos=self.pos, 
+            uname=self.uname, highlight_metric=metric, output_image=False)
+        print("done")
+
+
 def create_dependabot_issue_rem_graph_with_ripples(package_json: str, lockfile: str, re_nodes: list) -> tuple:
     """
     create a rem graph that contains a complete dependency graph and metrics of health
@@ -680,8 +697,8 @@ def create_dependabot_issue_rem_graph_with_ripples(package_json: str, lockfile: 
     html_folder = join(REM_DEPENDABOT_HTML_OUTDIR, uname)
     if not exists(html_folder):
         os.mkdir(html_folder)
-    for metric in ['final', 'quality', 'popularity', 'maintenance']:
-        create_dependabot_issue_rem_graph_with_ripples_helper(G=G.copy(), pos=pos, uname=uname, re_nodes=re_nodes, highlight_metric=metric, output_image=(metric=='final'))
+    # run final metric only 
+    create_dependabot_issue_rem_graph_with_ripples_helper(G=G.copy(), pos=pos, uname=uname, highlight_metric='final', output_image=True)
     # write index files
     f = open(REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE, 'r')
     index_tmpl = f.read()
