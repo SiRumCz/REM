@@ -699,6 +699,8 @@ def create_dependabot_issue_rem_graph_with_ripples(package_json: str, lockfile: 
         os.mkdir(html_folder)
     # run final metric only 
     create_dependabot_issue_rem_graph_with_ripples_helper(G=G.copy(), pos=pos, uname=uname, highlight_metric='final', output_image=True)
+    thread_a = Compute(G, pos, uname)
+    thread_a.start()
     # write index files
     f = open(REM_DEPENDABOT_ISSUES_INDEX_TEMPLATE, 'r')
     index_tmpl = f.read()
