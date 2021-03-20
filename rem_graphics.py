@@ -540,7 +540,7 @@ def draw_dependabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                                 thickness=10
                              )),
                text=Xv_d_texthover[:-1],
-               hovertemplate='%{text}')]
+               hovertemplate='%{text}<extra></extra>')]
     if len(Xv_d) > 0:
         data += [go.Scatter(
                x=Xv_d[-1:],
@@ -555,7 +555,7 @@ def draw_dependabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                              line=dict(color=Xv_d_linecolors[-1:], width=Xv_d_linewidth[-1:])
                              ),
                text=Xv_d_texthover[-1:],
-               hovertemplate='%{text}'
+               hovertemplate='%{text}<extra></extra>'
         )]
     Xv_r_symbols = [m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-symbol') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
     Xv_r_sizes = [m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')!='application-root']+[m.get('marker-size') for x,m in r_G.nodes(data=True) if m.get('type')=='application-root']
@@ -584,7 +584,7 @@ def draw_dependabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                                 thickness=10
                              )),
                text=Xv_r_texthover[:-1],
-               hovertemplate='%{text}')]
+               hovertemplate='%{text}<extra></extra>')]
     # add application node
     if len(Xv_r) > 0:
         data += [go.Scatter(
@@ -600,7 +600,7 @@ def draw_dependabot_issue_rem_graph(r_G: nx.DiGraph, d_G: nx.DiGraph, pos: dict,
                              line=dict(color=Xv_r_linecolors[-1:], width=Xv_r_linewidth[-1:])
                              ),
                text=Xv_r_texthover[-1:],
-               hovertemplate='%{text}'
+               hovertemplate='%{text}<extra></extra>'
         )]
     # create
     fig=go.Figure(data=data)
